@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>ReimBox</AssemblyName>
+    <Product>ReimBox</Product>
+    <Description>ReimBox local reimbursement material organizer</Description>
+    <ApplicationIcon>logo\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PdfPig" Version="0.1.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Tools\**\*.cs" />
+    <EmbeddedResource Remove="Tools\**\*" />
+    <None Remove="Tools\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="PaddleWorker\paddle_vl_worker.py" CopyToOutputDirectory="PreserveNewest" />
+    <Resource Include="logo\icon.png" />
+  </ItemGroup>
+
+</Project>

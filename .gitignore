@@ -1,0 +1,36 @@
+# Build outputs
+bin/
+obj/
+.buildcheck/
+publish/
+release/
+artifacts/
+
+# Visual Studio / user state
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+.paddle-*.log
+.scipy-*.log
+
+# Local Python / Paddle environments
+.venv/
+.venv_paddleocr/
+.venv_paddleocr_runtime/
+.paddle-vl-smoke-output/
+
+# Test invoices / financial materials
+test/
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp

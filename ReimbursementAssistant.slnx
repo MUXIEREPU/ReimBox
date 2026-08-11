@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/Tools/">
+    <Project Path="Tools/RecognitionVerifier/RecognitionVerifier.csproj" />
+  </Folder>
+  <Project Path="ReimbursementAssistant.csproj" />
+</Solution>
