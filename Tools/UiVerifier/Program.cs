@@ -1,5 +1,7 @@
 using System.IO;
+using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 using ReimbursementAssistant.Configuration;
 using ReimbursementAssistant.Models;
 using ReimbursementAssistant.Views;
@@ -24,9 +26,10 @@ internal static class Program
 
         try
         {
+            var mainWindow = new MainWindow();
             var windows = new Window[]
             {
-                new MainWindow(),
+                mainWindow,
                 new BulkEditWindow(2),
                 new QuickReviewWindow([record]),
                 new SettingsWindow(new ReimbursementSettings(), 0),
@@ -37,6 +40,20 @@ internal static class Program
                 new UpdateAvailableWindow(new ReimbursementAssistant.Services.UpdateCheckResult(true, new Version(0, 2, 0), new Version(0, 3, 0), "v0.3.0", "https://example.com", "测试更新说明"))
             };
             Console.WriteLine($"UI checks: {windows.Length}/{windows.Length} windows loaded");
+
+            var buildMenu = typeof(MainWindow).GetMethod("BuildProjectMenu", BindingFlags.Instance | BindingFlags.NonPublic)
+                            ?? throw new MissingMethodException("未找到项目菜单构造方法。");
+            var projectMenu = buildMenu.Invoke(mainWindow, [mainWindow.DataContext]) as ContextMenu
+                              ?? throw new InvalidOperationException("项目菜单未能创建。");
+            projectMenu.ApplyTemplate();
+            var menuItems = projectMenu.Items.OfType<MenuItem>().ToList();
+            if (projectMenu.Style is null || menuItems.Count < 5 || menuItems.Any(item => item.Style is null))
+            {
+                throw new InvalidOperationException("项目菜单的现代样式或菜单项不完整。");
+            }
+            foreach (var item in menuItems) item.ApplyTemplate();
+            Console.WriteLine("Project menu check: modern style and items loaded");
+
             foreach (var window in windows) window.Close();
             return 0;
         }

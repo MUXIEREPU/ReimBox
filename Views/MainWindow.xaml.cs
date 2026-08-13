@@ -369,35 +369,85 @@ public partial class MainWindow : Window
     private void ProjectMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel viewModel || sender is not Button button) return;
-        var menu = new ContextMenu();
-        menu.Items.Add(CreateMenuItem("新建项目", viewModel.NewProjectCommand));
-        menu.Items.Add(CreateMenuItem("打开项目…", viewModel.OpenProjectCommand));
-        menu.Items.Add(new Separator());
-        menu.Items.Add(CreateMenuItem("保存项目", viewModel.SaveProjectCommand));
-        menu.Items.Add(CreateMenuItem("项目另存为…", viewModel.SaveProjectAsCommand));
+        var menu = BuildProjectMenu(viewModel);
+        menu.PlacementTarget = button;
+        menu.Placement = PlacementMode.Bottom;
+        menu.HorizontalOffset = -8;
+        menu.VerticalOffset = 4;
+        menu.IsOpen = true;
+    }
+
+    private ContextMenu BuildProjectMenu(MainViewModel viewModel)
+    {
+        var menu = new ContextMenu
+        {
+            Style = (Style)FindResource("ModernContextMenuStyle")
+        };
+        menu.Items.Add(CreateMenuItem("新建项目", "\uE710", viewModel.NewProjectCommand));
+        menu.Items.Add(CreateMenuItem("打开项目…", "\uE8E5", viewModel.OpenProjectCommand));
+        menu.Items.Add(CreateMenuSeparator());
+        menu.Items.Add(CreateMenuItem("保存项目", "\uE74E", viewModel.SaveProjectCommand));
+        menu.Items.Add(CreateMenuItem("项目另存为…", "\uE792", viewModel.SaveProjectAsCommand));
         var recent = viewModel.RecentProjects;
         if (recent.Count > 0)
         {
-            menu.Items.Add(new Separator());
-            var recentRoot = new MenuItem { Header = "最近项目" };
+            menu.Items.Add(CreateMenuSeparator());
+            var recentRoot = CreateMenuItem("最近项目", "\uE81C");
             foreach (var path in recent)
             {
-                var item = new MenuItem { Header = Path.GetFileNameWithoutExtension(path), ToolTip = path };
+                var item = CreateMenuItem(Path.GetFileNameWithoutExtension(path), "\uE8A5");
+                item.ToolTip = path;
                 item.Click += (_, _) => viewModel.OpenProjectPath(path);
                 recentRoot.Items.Add(item);
             }
             menu.Items.Add(recentRoot);
         }
-        menu.Items.Add(new Separator());
-        var updateItem = new MenuItem { Header = "检查更新…" };
+        menu.Items.Add(CreateMenuSeparator());
+        var updateItem = CreateMenuItem("检查更新…", "\uE895");
         updateItem.Click += async (_, _) => await CheckForUpdatesAsync(viewModel, showWhenCurrent: true);
         menu.Items.Add(updateItem);
-        menu.PlacementTarget = button;
-        menu.Placement = PlacementMode.Bottom;
-        menu.IsOpen = true;
+        return menu;
     }
 
-    private static MenuItem CreateMenuItem(string header, System.Windows.Input.ICommand command) => new() { Header = header, Command = command };
+    private MenuItem CreateMenuItem(string header, string glyph, System.Windows.Input.ICommand? command = null) => new()
+    {
+        Header = CreateMenuHeader(header, glyph),
+        Command = command,
+        Style = (Style)FindResource("ModernMenuItemStyle")
+    };
+
+    private Separator CreateMenuSeparator() => new()
+    {
+        Style = (Style)FindResource("ModernMenuSeparatorStyle")
+    };
+
+    private static FrameworkElement CreateMenuHeader(string text, string glyph)
+    {
+        var panel = new Grid();
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var icon = new TextBlock
+        {
+            Text = glyph,
+            FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"),
+            FontSize = 15,
+            Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105)),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var label = new TextBlock
+        {
+            Text = text,
+            FontFamily = new System.Windows.Media.FontFamily("Microsoft YaHei UI"),
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            MaxWidth = 300
+        };
+        Grid.SetColumn(label, 1);
+        panel.Children.Add(icon);
+        panel.Children.Add(label);
+        return panel;
+    }
 
     private async Task CheckForUpdatesAsync(MainViewModel viewModel, bool showWhenCurrent)
     {
