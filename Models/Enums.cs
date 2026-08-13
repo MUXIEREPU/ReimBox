@@ -5,4 +5,4 @@ public enum AttachmentType { Invoice, PaymentProof, OrderPage, ThreeDPrintDetail
 public enum RecordStatus { Analyzing, Complete, MissingDocuments, NeedConfirmation, Error, Ignored }
 public enum RecognitionSource { None, NativePdfText, PaddleOcrVl16, WindowsOcr }
 public enum ValidationSeverity { Warning, Error }
-public enum InvoiceListFilter { All, Consumable, Travel, PrintFee, Other, Pending }
+public enum InvoiceListFilter { All, Consumable, Travel, PrintFee, Other, Pending, Duplicate }

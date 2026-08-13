@@ -625,3 +625,50 @@ ThreeDPrintDetails 3D打印明细
 ```
 
 导出时，不再按“超过1000元”单独建文件夹；现在统一按“是否带附件”归档。所有带附件的发票都会放入对应分类目录下的 `带附件发票` 文件夹，再按单张发票建子文件夹，把发票和附件放在一起。
+
+## 十三、v0.2 新增模块
+
+### 项目保存与恢复
+
+- `Models/ReimbursementProject.cs`：定义 `.reimbox` 项目的持久化数据结构。
+- `Services/ProjectService.cs`：负责项目读写、自动保存和最近项目列表。
+- `ViewModels/MainViewModel.Project.cs`：连接项目命令、启动恢复和主界面状态。
+
+### 检查与人工修正
+
+- `Services/DuplicateInvoiceService.cs`：根据发票号码及关键字段提示疑似重复发票。
+- `Services/CorrectionLearningService.cs`：在本机记录用户对销售方分类的人工修正。
+- `Models/BulkEditRequest.cs`：描述批量修改操作。
+- `Views/BulkEditWindow.xaml(.cs)`：批量分类、忽略、重新识别和移除记录。
+- `Views/QuickReviewWindow.xaml(.cs)`：逐条复核待确认或识别失败的记录。
+
+### 附件与设置
+
+- `Converters/AttachmentThumbnailConverter.cs`：为图片附件生成不锁定原文件的缩略图。
+- `Views/AttachmentPreviewWindow.xaml(.cs)`：预览 PDF、图片或打开其他附件。
+- `Services/SettingsService.cs`：将规则选项保存到本机。
+- `Views/SettingsWindow.xaml(.cs)`：编辑附件规则、导出限制和更新检查设置。
+
+### 更新、发布与验证
+
+- `Services/UpdateCheckService.cs`：检查 GitHub Release 最新版本。
+- `Views/UpdateAvailableWindow.xaml(.cs)`：展示版本信息、更新说明和忽略选项。
+- `build-release.ps1`：生成 Windows x64 自包含单文件 EXE，并检查发布命令是否成功。
+- `installer/ReimBox.iss`：可选的 Inno Setup 安装包定义。
+- `Tools/FeatureVerifier/`：验证项目读写、规则、重复检测和导出保护。
+- `Tools/UiVerifier/`：逐一加载主要窗口，捕获 XAML 初始化错误。
+
+### 本地数据目录
+
+程序运行过程中产生的用户数据均位于：
+
+```text
+%LocalAppData%\ReimBox\
+├── autosave.reimbox
+├── settings.json
+├── recent-projects.json
+├── learned-corrections.json
+└── crash.log
+```
+
+这些文件不会写入源码目录，也不包含在 Release 中。

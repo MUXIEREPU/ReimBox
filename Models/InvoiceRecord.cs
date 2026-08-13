@@ -116,7 +116,34 @@ public sealed class InvoiceRecord : INotifyPropertyChanged
     }
 
     public bool ManualOverride { get; set; }
+    public bool UserIgnored { get; set; }
     public string? Notes { get; set; }
+    private bool _isPossibleDuplicate;
+    public bool IsPossibleDuplicate
+    {
+        get => _isPossibleDuplicate;
+        set
+        {
+            if (Set(ref _isPossibleDuplicate, value))
+            {
+                OnChanged(nameof(DuplicateStatusDisplay));
+                OnChanged(nameof(MaterialStatusLabel));
+                OnChanged(nameof(MaterialStatusBackground));
+                OnChanged(nameof(MaterialStatusForeground));
+            }
+        }
+    }
+    private string _duplicateHint = "";
+    public string DuplicateHint { get => _duplicateHint; set => Set(ref _duplicateHint, value); }
+    public bool DuplicateDismissed { get; set; }
+    public string DuplicateStatusDisplay => IsPossibleDuplicate ? "疑似重复" : "";
+    public bool OriginalFileExists => File.Exists(OriginalFilePath);
+    public bool HasMissingFiles => !OriginalFileExists || SupplementAttachments.Any(attachment => !File.Exists(attachment.FilePath));
+    public string MissingFilesDisplay => !OriginalFileExists
+        ? "原始发票文件已被移动或删除"
+        : SupplementAttachments.FirstOrDefault(attachment => !File.Exists(attachment.FilePath)) is { } missing
+            ? $"附件不存在：{missing.FileName}"
+            : "";
     public IReadOnlyList<EnumOption<InvoiceCategory>> CategoryOptions { get; } =
     [
         new(InvoiceCategory.Consumable, "耗材"),
@@ -172,7 +199,7 @@ public sealed class InvoiceRecord : INotifyPropertyChanged
         _ => "分析中"
     };
 
-    public string MaterialStatusLabel => Status switch
+    public string MaterialStatusLabel => HasMissingFiles ? "文件丢失" : IsPossibleDuplicate ? "疑似重复" : Status switch
     {
         RecordStatus.Complete => "完整",
         RecordStatus.MissingDocuments => "缺" + string.Join("、", MissingTypes().Select(DisplayAttachment)),
@@ -182,7 +209,7 @@ public sealed class InvoiceRecord : INotifyPropertyChanged
         _ => "分析中"
     };
 
-    public string MaterialStatusBackground => Status switch
+    public string MaterialStatusBackground => HasMissingFiles ? "#FEE2E2" : IsPossibleDuplicate ? "#FCE7F3" : Status switch
     {
         RecordStatus.Complete => "#DCFCE7",
         RecordStatus.MissingDocuments => "#FEF3C7",
@@ -191,7 +218,7 @@ public sealed class InvoiceRecord : INotifyPropertyChanged
         _ => "#DBEAFE"
     };
 
-    public string MaterialStatusForeground => Status switch
+    public string MaterialStatusForeground => HasMissingFiles ? "#991B1B" : IsPossibleDuplicate ? "#9D174D" : Status switch
     {
         RecordStatus.Complete => "#166534",
         RecordStatus.MissingDocuments => "#92400E",
@@ -242,6 +269,16 @@ public sealed class InvoiceRecord : INotifyPropertyChanged
     }
 
     public void OnChanged(string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    public void RefreshFileState()
+    {
+        OnChanged(nameof(OriginalFileExists));
+        OnChanged(nameof(HasMissingFiles));
+        OnChanged(nameof(MissingFilesDisplay));
+        OnChanged(nameof(MaterialStatusLabel));
+        OnChanged(nameof(MaterialStatusBackground));
+        OnChanged(nameof(MaterialStatusForeground));
+    }
 }
 
 public sealed record EnumOption<T>(T Value, string Label);

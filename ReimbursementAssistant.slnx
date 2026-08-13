@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/Tools/">
+    <Project Path="Tools/FeatureVerifier/FeatureVerifier.csproj" />
     <Project Path="Tools/RecognitionVerifier/RecognitionVerifier.csproj" />
+    <Project Path="Tools/UiVerifier/UiVerifier.csproj" />
   </Folder>
   <Project Path="ReimbursementAssistant.csproj" />
 </Solution>

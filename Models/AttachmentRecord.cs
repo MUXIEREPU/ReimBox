@@ -4,6 +4,8 @@ public sealed class AttachmentRecord : System.ComponentModel.INotifyPropertyChan
     public Guid Id { get; init; } = Guid.NewGuid();
     public required string FilePath { get; init; }
     public string FileName => Path.GetFileName(FilePath);
+    public bool FileExists => File.Exists(FilePath);
+    public bool IsImage => new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp" }.Contains(Path.GetExtension(FilePath), StringComparer.OrdinalIgnoreCase);
     private AttachmentType _attachmentType = AttachmentType.Other;
     public AttachmentType AttachmentType
     {

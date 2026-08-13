@@ -2,8 +2,10 @@
 bin/
 obj/
 .buildcheck/
+.uicheck/
 publish/
 release/
+installer/output/
 artifacts/
 
 # Visual Studio / user state

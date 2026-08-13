@@ -2,6 +2,13 @@ namespace ReimbursementAssistant.Configuration;
 public sealed class ReimbursementSettings
 {
     public decimal ConsumablePaymentThreshold { get; set; } = 1000m;
+    public bool RequireFlightOrderPage { get; set; } = true;
+    public bool RequireFlightPaymentProof { get; set; } = true;
+    public bool RequireTrainOrderPage { get; set; } = true;
+    public bool RequireThreeDPrintDetails { get; set; } = true;
+    public bool AllowIncompleteExport { get; set; } = true;
+    public bool CheckForUpdatesOnStartup { get; set; } = true;
+    public string IgnoredUpdateTag { get; set; } = "";
     public bool EnablePaddleOcrVl { get; set; } = true;
     public bool EnablePaddleAutoFallback { get; set; }
     public string PaddlePythonExecutable { get; set; } = FindLocalPythonExecutable();
@@ -10,6 +17,24 @@ public sealed class ReimbursementSettings
     public string PaddleDevice { get; set; } = "auto";
     // CPU inference and a first model initialization can take several minutes.
     public int PaddleTimeoutSeconds { get; set; } = 600;
+
+    public ReimbursementSettings Clone() => new()
+    {
+        ConsumablePaymentThreshold = ConsumablePaymentThreshold,
+        RequireFlightOrderPage = RequireFlightOrderPage,
+        RequireFlightPaymentProof = RequireFlightPaymentProof,
+        RequireTrainOrderPage = RequireTrainOrderPage,
+        RequireThreeDPrintDetails = RequireThreeDPrintDetails,
+        AllowIncompleteExport = AllowIncompleteExport,
+        CheckForUpdatesOnStartup = CheckForUpdatesOnStartup,
+        IgnoredUpdateTag = IgnoredUpdateTag,
+        EnablePaddleOcrVl = EnablePaddleOcrVl,
+        EnablePaddleAutoFallback = EnablePaddleAutoFallback,
+        PaddlePythonExecutable = PaddlePythonExecutable,
+        PaddleWorkerScript = PaddleWorkerScript,
+        PaddleDevice = PaddleDevice,
+        PaddleTimeoutSeconds = PaddleTimeoutSeconds
+    };
 
     private static string FindLocalPythonExecutable()
     {
