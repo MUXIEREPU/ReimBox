@@ -1,5 +1,5 @@
 #define MyAppName "ReimBox"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.2.1"
 #define MyAppPublisher "MUXIEREPU"
 #define MyAppURL "https://github.com/MUXIEREPU/ReimBox"
 #define MyAppExeName "ReimBox.exe"

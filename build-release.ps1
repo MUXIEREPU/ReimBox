@@ -7,12 +7,18 @@ $ErrorActionPreference = "Stop"
 $projectRoot = $PSScriptRoot
 $publishDirectory = Join-Path $projectRoot "release\$Runtime"
 
+if (Test-Path -LiteralPath $publishDirectory) {
+    Remove-Item -LiteralPath $publishDirectory -Recurse -Force
+}
+
 dotnet publish (Join-Path $projectRoot "ReimbursementAssistant.csproj") `
     -c Release `
     -r $Runtime `
     --self-contained true `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
+    -p:DebugType=None `
+    -p:DebugSymbols=false `
     -p:PublishDir="$publishDirectory\"
 
 if ($LASTEXITCODE -ne 0) {

@@ -16,8 +16,9 @@ public sealed class ExportService
             InvoiceCategory.Consumable => "01_耗材",
             InvoiceCategory.Travel => "02_差旅",
             InvoiceCategory.PrintFee => "03_打印费",
-            InvoiceCategory.Other => "04_其他",
-            _ => "05_待确认"
+            InvoiceCategory.ShippingFee => "04_邮寄费",
+            InvoiceCategory.Other => "05_其他",
+            _ => "06_待确认"
         });
         foreach (var group in groups)
         {

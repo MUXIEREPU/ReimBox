@@ -155,6 +155,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
             OnChanged(nameof(IsConsumableFilterActive));
             OnChanged(nameof(IsTravelFilterActive));
             OnChanged(nameof(IsPrintFeeFilterActive));
+            OnChanged(nameof(IsShippingFeeFilterActive));
             OnChanged(nameof(IsOtherFilterActive));
             OnChanged(nameof(IsPendingFilterActive));
             OnChanged(nameof(IsDuplicateFilterActive));
@@ -168,6 +169,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     public bool IsConsumableFilterActive => ActiveFilter == InvoiceListFilter.Consumable;
     public bool IsTravelFilterActive => ActiveFilter == InvoiceListFilter.Travel;
     public bool IsPrintFeeFilterActive => ActiveFilter == InvoiceListFilter.PrintFee;
+    public bool IsShippingFeeFilterActive => ActiveFilter == InvoiceListFilter.ShippingFee;
     public bool IsOtherFilterActive => ActiveFilter == InvoiceListFilter.Other;
     public bool IsPendingFilterActive => ActiveFilter == InvoiceListFilter.Pending;
     public bool IsDuplicateFilterActive => ActiveFilter == InvoiceListFilter.Duplicate;
@@ -186,6 +188,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     public int ConsumableCount => Records.Count(x => !x.UserIgnored && x.Category == InvoiceCategory.Consumable);
     public int TravelCount => Records.Count(x => !x.UserIgnored && x.Category == InvoiceCategory.Travel);
     public int PrintFeeCount => Records.Count(x => !x.UserIgnored && x.Category == InvoiceCategory.PrintFee);
+    public int ShippingFeeCount => Records.Count(x => !x.UserIgnored && x.Category == InvoiceCategory.ShippingFee);
     public int OtherCount => Records.Count(x => !x.UserIgnored && x.Category == InvoiceCategory.Other);
     public int DuplicateCount => Records.Count(x => x.IsPossibleDuplicate);
     public int MissingCount => Records.Count(x => x.Status == RecordStatus.MissingDocuments);
@@ -196,10 +199,11 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     public decimal ConsumableTotal => Records.Where(x => !x.UserIgnored && x.Category == InvoiceCategory.Consumable).Sum(x => x.TotalAmount ?? 0);
     public decimal TravelTotal => Records.Where(x => !x.UserIgnored && x.Category == InvoiceCategory.Travel).Sum(x => x.TotalAmount ?? 0);
     public decimal PrintFeeTotal => Records.Where(x => !x.UserIgnored && x.Category == InvoiceCategory.PrintFee).Sum(x => x.TotalAmount ?? 0);
+    public decimal ShippingFeeTotal => Records.Where(x => !x.UserIgnored && x.Category == InvoiceCategory.ShippingFee).Sum(x => x.TotalAmount ?? 0);
     public decimal OtherTotal => Records.Where(x => !x.UserIgnored && x.Category == InvoiceCategory.Other).Sum(x => x.TotalAmount ?? 0);
     public decimal UnknownTotal => Records.Where(x => !x.UserIgnored && x.Category == InvoiceCategory.Unknown).Sum(x => x.TotalAmount ?? 0);
     public decimal GrandTotal => Records.Where(x => !x.UserIgnored).Sum(x => x.TotalAmount ?? 0);
-    public string AmountSummary => $"耗材 ¥{ConsumableTotal:N2}  |  差旅 ¥{TravelTotal:N2}  |  打印费 ¥{PrintFeeTotal:N2}  |  其他 ¥{OtherTotal:N2}  |  待确认 ¥{UnknownTotal:N2}  |  总计 ¥{GrandTotal:N2}";
+    public string AmountSummary => $"耗材 ¥{ConsumableTotal:N2}  |  差旅 ¥{TravelTotal:N2}  |  打印费 ¥{PrintFeeTotal:N2}  |  邮寄费 ¥{ShippingFeeTotal:N2}  |  其他 ¥{OtherTotal:N2}  |  待确认 ¥{UnknownTotal:N2}  |  总计 ¥{GrandTotal:N2}";
     public InvoiceNamingRule NamingRule => _namingRule.Clone();
 
     public RelayCommand ImportCommand { get; }
@@ -212,6 +216,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     public RelayCommand ShowConsumableCommand { get; }
     public RelayCommand ShowTravelCommand { get; }
     public RelayCommand ShowPrintFeeCommand { get; }
+    public RelayCommand ShowShippingFeeCommand { get; }
     public RelayCommand ShowOtherCommand { get; }
     public RelayCommand ShowPendingCommand { get; }
     public RelayCommand ShowDuplicateCommand { get; }
@@ -248,6 +253,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         ShowConsumableCommand = new RelayCommand(() => ActiveFilter = InvoiceListFilter.Consumable);
         ShowTravelCommand = new RelayCommand(() => ActiveFilter = InvoiceListFilter.Travel);
         ShowPrintFeeCommand = new RelayCommand(() => ActiveFilter = InvoiceListFilter.PrintFee);
+        ShowShippingFeeCommand = new RelayCommand(() => ActiveFilter = InvoiceListFilter.ShippingFee);
         ShowOtherCommand = new RelayCommand(() => ActiveFilter = InvoiceListFilter.Other);
         ShowPendingCommand = new RelayCommand(() => ActiveFilter = InvoiceListFilter.Pending);
         ShowDuplicateCommand = new RelayCommand(() => ActiveFilter = InvoiceListFilter.Duplicate);
@@ -964,6 +970,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         OnChanged(nameof(ConsumableCount));
         OnChanged(nameof(TravelCount));
         OnChanged(nameof(PrintFeeCount));
+        OnChanged(nameof(ShippingFeeCount));
         OnChanged(nameof(OtherCount));
         OnChanged(nameof(DuplicateCount));
         OnChanged(nameof(MissingCount));
@@ -974,6 +981,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         OnChanged(nameof(ConsumableTotal));
         OnChanged(nameof(TravelTotal));
         OnChanged(nameof(PrintFeeTotal));
+        OnChanged(nameof(ShippingFeeTotal));
         OnChanged(nameof(OtherTotal));
         OnChanged(nameof(UnknownTotal));
         OnChanged(nameof(GrandTotal));
@@ -996,6 +1004,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
             InvoiceListFilter.Consumable => record.Category == InvoiceCategory.Consumable,
             InvoiceListFilter.Travel => record.Category == InvoiceCategory.Travel,
             InvoiceListFilter.PrintFee => record.Category == InvoiceCategory.PrintFee,
+            InvoiceListFilter.ShippingFee => record.Category == InvoiceCategory.ShippingFee,
             InvoiceListFilter.Other => record.Category == InvoiceCategory.Other,
             InvoiceListFilter.Pending => IsPending(record),
             InvoiceListFilter.Duplicate => record.IsPossibleDuplicate,

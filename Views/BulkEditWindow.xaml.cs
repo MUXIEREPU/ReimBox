@@ -14,6 +14,7 @@ public partial class BulkEditWindow : Window
             new EnumOption<InvoiceCategory>(InvoiceCategory.Consumable, "耗材"),
             new EnumOption<InvoiceCategory>(InvoiceCategory.Travel, "差旅"),
             new EnumOption<InvoiceCategory>(InvoiceCategory.PrintFee, "打印费"),
+            new EnumOption<InvoiceCategory>(InvoiceCategory.ShippingFee, "邮寄费"),
             new EnumOption<InvoiceCategory>(InvoiceCategory.Other, "其他")
         };
         CategoryBox.SelectedIndex = 0;

@@ -149,6 +149,7 @@ public sealed class InvoiceRecord : INotifyPropertyChanged
         new(InvoiceCategory.Consumable, "耗材"),
         new(InvoiceCategory.Travel, "差旅"),
         new(InvoiceCategory.PrintFee, "打印费"),
+        new(InvoiceCategory.ShippingFee, "邮寄费"),
         new(InvoiceCategory.Other, "其他")
     ];
 
@@ -172,6 +173,7 @@ public sealed class InvoiceRecord : INotifyPropertyChanged
             InvoiceCategory.Consumable => "耗材",
             InvoiceCategory.Travel => "差旅",
             InvoiceCategory.PrintFee => "打印费",
+            InvoiceCategory.ShippingFee => "邮寄费",
             InvoiceCategory.Other => "其他",
             _ => "待确认"
         };

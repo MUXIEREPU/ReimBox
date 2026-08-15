@@ -21,7 +21,7 @@
                         <Border Background="#EFF6FF" CornerRadius="12" Padding="15" Margin="0,0,8,0"><StackPanel><TextBlock Text="金额" Foreground="#64748B"/><TextBlock x:Name="AmountText" FontSize="22" FontWeight="SemiBold" Foreground="#1D4ED8"/></StackPanel></Border>
                         <Border Background="#FFFFFF" CornerRadius="12" Padding="15" Margin="8,0,0,0"><StackPanel><TextBlock Text="项目 / 商户" Foreground="#64748B"/><TextBlock x:Name="MerchantText" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/></StackPanel></Border>
                     </UniformGrid>
-                    <TextBlock Text="一级分类（快捷键 1～4）" Foreground="#64748B" Margin="0,0,0,6"/>
+                    <TextBlock Text="一级分类（快捷键 1～5）" Foreground="#64748B" Margin="0,0,0,6"/>
                     <ComboBox x:Name="CategoryBox" DisplayMemberPath="Label" SelectedValuePath="Value" SelectionChanged="CategoryBox_SelectionChanged"/>
                     <TextBlock Text="二级分类" Foreground="#64748B" Margin="0,14,0,6"/>
                     <ComboBox x:Name="SubCategoryBox" DisplayMemberPath="Label" SelectedValuePath="Value"/>

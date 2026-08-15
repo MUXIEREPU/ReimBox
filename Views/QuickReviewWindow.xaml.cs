@@ -19,6 +19,7 @@ public partial class QuickReviewWindow : Window
             new EnumOption<InvoiceCategory>(InvoiceCategory.Consumable, "耗材"),
             new EnumOption<InvoiceCategory>(InvoiceCategory.Travel, "差旅"),
             new EnumOption<InvoiceCategory>(InvoiceCategory.PrintFee, "打印费"),
+            new EnumOption<InvoiceCategory>(InvoiceCategory.ShippingFee, "邮寄费"),
             new EnumOption<InvoiceCategory>(InvoiceCategory.Other, "其他")
         };
         SubCategoryBox.ItemsSource = new[]
@@ -71,7 +72,7 @@ public partial class QuickReviewWindow : Window
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key is >= Key.D1 and <= Key.D4)
+        if (e.Key is >= Key.D1 and <= Key.D5)
         {
             CategoryBox.SelectedIndex = e.Key - Key.D1;
             e.Handled = true;

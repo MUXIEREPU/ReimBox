@@ -299,6 +299,13 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.S && viewModel.SaveProjectCommand.CanExecute(null))
+        {
+            viewModel.SaveProjectCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Escape && viewModel.ClearSearchCommand.CanExecute(null))
         {
             viewModel.ClearSearchCommand.Execute(null);
@@ -455,6 +462,12 @@ public partial class MainWindow : Window
         try
         {
             var result = await new UpdateCheckService().CheckAsync();
+            if (showWhenCurrent && result.LatestVersion is null)
+            {
+                MessageBox.Show($"已连接到 GitHub Release，但最新版本号无法识别。\n\n请确认 Release 标签使用类似 v0.2.1 的格式。\n当前检测到：{result.Tag}", "检查更新", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             if (result.HasUpdate && (showWhenCurrent || !string.Equals(viewModel.GetSettings().IgnoredUpdateTag, result.Tag, StringComparison.OrdinalIgnoreCase)))
             {
                 var dialog = new UpdateAvailableWindow(result) { Owner = this };

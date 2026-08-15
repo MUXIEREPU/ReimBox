@@ -619,18 +619,26 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <DockPanel>
-            <StackPanel>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
                 <TextBlock Text="ReimBox" FontSize="29" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
                 <TextBlock Text="本地处理 · 原始文件只读 · 自动检查材料完整性" Foreground="{StaticResource MutedTextBrush}" Margin="0,7,0,0" />
             </StackPanel>
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button Content="项目" Click="ProjectMenu_Click" Margin="30,0,15,0" ToolTip="新建、打开或保存 ReimBox 项目" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left" Margin="24,0,16,0">
                 <Button Content="导入文件" Command="{Binding ImportCommand}" Margin="0,0,15,0" ToolTip="导入一个或多个 PDF（Ctrl+O）" />
                 <Button Content="导入文件夹" Command="{Binding ImportFolderCommand}" Margin="0,0,15,0" ToolTip="递归扫描文件夹中的 PDF" />
                 <Button Content="{Binding ReimbursementInfoButtonText}" Click="EditReimbursementInfo_Click" Margin="0,0,15,0">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Setter Property="Foreground" Value="#C2410C" />
+                            <Setter Property="Background" Value="#FFF7ED" />
+                            <Setter Property="BorderBrush" Value="#FDBA74" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding HasRequiredReimbursementInfo}" Value="True">
                                     <Setter Property="Foreground" Value="#047857" />
@@ -642,10 +650,14 @@
                     </Button.Style>
                 </Button>
                 <Button Content="批量命名" Click="EditNamingRule_Click" Margin="0,0,15,0" />
-                <Button Content="设置" Click="Settings_Click" Margin="0,0,15,0" />
                 <Button Content="生成报销材料" Command="{Binding ExportCommand}" Style="{StaticResource PrimaryButtonStyle}" />
             </StackPanel>
-        </DockPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="项目" Click="ProjectMenu_Click" Margin="0,0,12,0" ToolTip="新建、打开或保存 ReimBox 项目" />
+                <Button Content="设置" Click="Settings_Click" Margin="0" />
+            </StackPanel>
+        </Grid>
 
         <Border Grid.Row="1"
                 Margin="0,20,0,16"
@@ -771,6 +783,9 @@
                             </Button>
                             <Button Style="{StaticResource FilterButtonStyle}" Tag="{Binding IsPrintFeeFilterActive}" Command="{Binding ShowPrintFeeCommand}">
                                 <StackPanel Orientation="Horizontal"><TextBlock Text="打印费 " /><TextBlock Text="{Binding PrintFeeCount}" FontWeight="SemiBold" /></StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource FilterButtonStyle}" Tag="{Binding IsShippingFeeFilterActive}" Command="{Binding ShowShippingFeeCommand}">
+                                <StackPanel Orientation="Horizontal"><TextBlock Text="邮寄费 " /><TextBlock Text="{Binding ShippingFeeCount}" FontWeight="SemiBold" /></StackPanel>
                             </Button>
                             <Button Style="{StaticResource FilterButtonStyle}" Tag="{Binding IsOtherFilterActive}" Command="{Binding ShowOtherCommand}">
                                 <StackPanel Orientation="Horizontal"><TextBlock Text="其他 " /><TextBlock Text="{Binding OtherCount}" FontWeight="SemiBold" /></StackPanel>

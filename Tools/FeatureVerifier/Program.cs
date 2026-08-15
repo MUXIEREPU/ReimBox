@@ -56,6 +56,20 @@ try
     rules.Evaluate(threeDPrinting);
     Check(threeDPrinting.MissingTypes().Contains(AttachmentType.ThreeDPrintDetails), "规则引擎：3D 打印耗材应要求打印明细");
 
+    var classifier = new InvoiceClassificationService();
+    var printFee = new InvoiceRecord { OriginalFilePath = invoicePath };
+    classifier.Classify(printFee, "项目名称：文件打印及装订服务");
+    Check(printFee.Category == InvoiceCategory.PrintFee, "自动分类：文件打印应归入打印费");
+    var shippingFee = new InvoiceRecord { OriginalFilePath = invoicePath };
+    classifier.Classify(shippingFee, "销售方：顺丰速运有限公司 项目名称：国内快递服务");
+    Check(shippingFee.Category == InvoiceCategory.ShippingFee, "自动分类：快递服务应归入邮寄费");
+    var dispatchServiceFee = new InvoiceRecord { OriginalFilePath = invoicePath };
+    classifier.Classify(dispatchServiceFee, "项目名称：*生产生活服务*收派服务费");
+    Check(dispatchServiceFee.Category == InvoiceCategory.ShippingFee, "自动分类：收派服务费应归入邮寄费");
+    var threeDPrintPriority = new InvoiceRecord { OriginalFilePath = invoicePath };
+    classifier.Classify(threeDPrintPriority, "项目名称：3D打印材料快速成型服务");
+    Check(threeDPrintPriority.Category == InvoiceCategory.Consumable && threeDPrintPriority.IsThreeDPrinting, "自动分类：3D 打印优先归入耗材");
+
     var importPdfPath = Path.Combine(temporaryRoot, "import.pdf");
     var unsupportedPath = Path.Combine(temporaryRoot, "not-an-invoice.png");
     File.WriteAllText(importPdfPath, "pdf");
@@ -85,6 +99,7 @@ try
     };
     var settingsCopy = settings.Clone();
     Check(settingsCopy.ConsumablePaymentThreshold == 2500m && !settingsCopy.RequireFlightPaymentProof && settingsCopy.IgnoredUpdateTag == "v9.9.9" && settingsCopy.PaddleDevice == "cpu", "设置：复制时保留规则、更新和 Paddle 配置");
+    Check(typeof(ReimbursementSettings).Assembly.GetManifestResourceNames().Contains("ReimBox.PaddleWorker.paddle_vl_worker.py"), "发布：PaddleWorker 已嵌入 ReimBox 程序集");
 
     var duplicate = new InvoiceRecord
     {
