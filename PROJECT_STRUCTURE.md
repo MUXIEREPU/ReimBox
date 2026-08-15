@@ -103,7 +103,7 @@ Models/
 
 定义核心枚举：
 
-- `InvoiceCategory`：一级分类，包括待确认、耗材、差旅、打印费、其他。界面下拉框不显示“待确认”，未识别好的材料只在材料状态中显示待确认。
+- `InvoiceCategory`：一级分类，包括待确认、耗材、差旅、打印费、邮寄费、其他。界面下拉框不显示“待确认”，未识别好的材料只在材料状态中显示待确认。
 - `TravelSubCategory`：差旅二级分类，包括飞机、火车、住宿、出租车、租车、路桥费、燃油费等。
 - `AttachmentType`：附件类型，包括发票、支付记录截图、订单页面、3D 打印明细、其他材料。
 - `RecordStatus`：材料状态，包括分析中、完整、缺材料、待确认、识别失败、已忽略。
@@ -211,7 +211,7 @@ PDF 原生文本读取服务。
 2. 如果文本太少，可按需调用 PaddleOCR-VL 深度识别；
 3. 如果 Paddle 不可用，再尝试 Windows 本地 OCR；
 4. 从文本中提取发票号码、开票日期、销售方、商品名称、金额、税额、价税合计；
-5. 调用分类服务自动判断耗材/差旅；
+5. 调用分类服务自动判断耗材、差旅、打印费、邮寄费；
 6. 调用字段校验服务生成校验提示。
 
 ### `InvoiceItemExtractionService.cs`
@@ -239,7 +239,7 @@ PDF 原生文本读取服务。
 - 出租车、网约车、滴滴：差旅/出租车；
 - 材料、配件、电机、螺丝、电子元件：耗材。
 
-如果路径里包含 `耗材` 或 `差旅`，也会作为低置信度辅助判断。
+如果路径里包含 `耗材`、`差旅`、`打印费` 或 `邮寄费`，也会作为低置信度辅助判断。
 
 ### `InvoiceValidationService.cs`
 
@@ -294,7 +294,7 @@ PDF 原生文本读取服务。
 当前导出规则：
 
 - 输出根目录使用 `yyyyMMdd_姓名_总金额元`，如果已存在会自动追加 `_01`、`_02`；
-- 按分类生成 `01_耗材_金额元`、`02_差旅_金额元`、`03_打印费_金额元`、`04_其他_金额元`、`05_待确认_金额元`；
+- 按分类生成 `01_耗材_金额元`、`02_差旅_金额元`、`03_打印费_金额元`、`04_邮寄费_金额元`、`05_其他_金额元`、`06_待确认_金额元`；
 - 普通无附件发票直接平铺在分类目录下；
 - 所有带补充附件的发票会进入分类目录下的 `带附件发票` 文件夹，再按单张发票创建子文件夹，并把发票和附件放在一起；
 - 发票文件名可以使用“批量命名”中设置的规则。默认只影响导出文件夹；如果用户明确选择，也可以直接重命名原始 PDF；
@@ -625,3 +625,50 @@ ThreeDPrintDetails 3D打印明细
 ```
 
 导出时，不再按“超过1000元”单独建文件夹；现在统一按“是否带附件”归档。所有带附件的发票都会放入对应分类目录下的 `带附件发票` 文件夹，再按单张发票建子文件夹，把发票和附件放在一起。
+
+## 十三、v0.2 新增模块
+
+### 项目保存与恢复
+
+- `Models/ReimbursementProject.cs`：定义 `.reimbox` 项目的持久化数据结构。
+- `Services/ProjectService.cs`：负责项目读写、自动保存和最近项目列表。
+- `ViewModels/MainViewModel.Project.cs`：连接项目命令、启动恢复和主界面状态。
+
+### 检查与人工修正
+
+- `Services/DuplicateInvoiceService.cs`：根据发票号码及关键字段提示疑似重复发票。
+- `Services/CorrectionLearningService.cs`：在本机记录用户对销售方分类的人工修正。
+- `Models/BulkEditRequest.cs`：描述批量修改操作。
+- `Views/BulkEditWindow.xaml(.cs)`：批量分类、忽略、重新识别和移除记录。
+- `Views/QuickReviewWindow.xaml(.cs)`：逐条复核待确认或识别失败的记录。
+
+### 附件与设置
+
+- `Converters/AttachmentThumbnailConverter.cs`：为图片附件生成不锁定原文件的缩略图。
+- `Views/AttachmentPreviewWindow.xaml(.cs)`：预览 PDF、图片或打开其他附件。
+- `Services/SettingsService.cs`：将规则选项保存到本机。
+- `Views/SettingsWindow.xaml(.cs)`：编辑附件规则、导出限制和更新检查设置。
+
+### 更新、发布与验证
+
+- `Services/UpdateCheckService.cs`：检查 GitHub Release 最新版本。
+- `Views/UpdateAvailableWindow.xaml(.cs)`：展示版本信息、更新说明和忽略选项。
+- `build-release.ps1`：生成 Windows x64 自包含单文件 EXE，并检查发布命令是否成功。
+- `installer/ReimBox.iss`：可选的 Inno Setup 安装包定义。
+- `Tools/FeatureVerifier/`：验证项目读写、规则、重复检测和导出保护。
+- `Tools/UiVerifier/`：逐一加载主要窗口，捕获 XAML 初始化错误。
+
+### 本地数据目录
+
+程序运行过程中产生的用户数据均位于：
+
+```text
+%LocalAppData%\ReimBox\
+├── autosave.reimbox
+├── settings.json
+├── recent-projects.json
+├── learned-corrections.json
+└── crash.log
+```
+
+这些文件不会写入源码目录，也不包含在 Release 中。

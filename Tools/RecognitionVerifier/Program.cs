@@ -28,6 +28,7 @@ foreach (var file in Directory.EnumerateFiles(args[0], "*.pdf", SearchOption.Top
         Console.WriteLine($"FILE: {record.OriginalFileName}");
         Console.WriteLine($"ITEM: {record.ItemDescription}");
         Console.WriteLine($"TOTAL: {record.TotalAmount}");
+        Console.WriteLine($"CATEGORY: {record.CategoryDisplay} ({record.Confidence:P0})");
         Console.WriteLine("TEXT:");
         Console.WriteLine(record.ExtractedText);
         return 0;

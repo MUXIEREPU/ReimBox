@@ -8,15 +8,17 @@ public sealed class ExportService
     public string Export(IEnumerable<InvoiceRecord> records, string baseDirectory, ReimbursementInfo reimbursementInfo, InvoiceNamingRule? namingRule = null)
     {
         var rule = namingRule ?? InvoiceNamingRule.Default();
-        var recordList = records.ToList();
+        var recordList = records.Where(record => !record.UserIgnored).ToList();
+        if (recordList.Count == 0) throw new InvalidOperationException("没有可导出的发票；当前记录均已标记为忽略。");
         var root = CreateUniqueRoot(baseDirectory, reimbursementInfo, recordList);
         var groups = recordList.GroupBy(x => x.Category switch
         {
             InvoiceCategory.Consumable => "01_耗材",
             InvoiceCategory.Travel => "02_差旅",
             InvoiceCategory.PrintFee => "03_打印费",
-            InvoiceCategory.Other => "04_其他",
-            _ => "05_待确认"
+            InvoiceCategory.ShippingFee => "04_邮寄费",
+            InvoiceCategory.Other => "05_其他",
+            _ => "06_待确认"
         });
         foreach (var group in groups)
         {

@@ -17,9 +17,15 @@ public sealed class PaddleOcrVlService(ReimbursementSettings settings)
         Directory.CreateDirectory(work);
         try
         {
-            if (!File.Exists(settings.PaddleWorkerScript)) return new PaddleOcrResult(string.Empty, "PaddleOCR‑VL worker 未找到");
+            var workerScript = settings.PaddleWorkerScript;
+            if (!File.Exists(workerScript))
+            {
+                workerScript = ReimbursementSettings.EnsureBundledPaddleWorker();
+                settings.PaddleWorkerScript = workerScript;
+            }
+            if (!File.Exists(workerScript)) return new PaddleOcrResult(string.Empty, "PaddleOCR‑VL worker 未找到");
             var info = new ProcessStartInfo { FileName = settings.PaddlePythonExecutable, RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true };
-            info.ArgumentList.Add(settings.PaddleWorkerScript); info.ArgumentList.Add("--input"); info.ArgumentList.Add(filePath);
+            info.ArgumentList.Add(workerScript); info.ArgumentList.Add("--input"); info.ArgumentList.Add(filePath);
             info.ArgumentList.Add("--output"); info.ArgumentList.Add(work);
             info.ArgumentList.Add("--device"); info.ArgumentList.Add(settings.PaddleDevice);
             using var process = Process.Start(info);

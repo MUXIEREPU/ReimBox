@@ -2,8 +2,11 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.ComponentModel;
 using ReimbursementAssistant.Models;
+using ReimbursementAssistant.Services;
 using ReimbursementAssistant.ViewModels;
+using System.Windows.Controls.Primitives;
 
 namespace ReimbursementAssistant.Views;
 public partial class MainWindow : Window
@@ -61,6 +64,7 @@ public partial class MainWindow : Window
             viewModel.ReimbursementPersonName = dialog.PersonName;
             viewModel.ReimbursementPersonIdentifier = dialog.PersonIdentifier;
             viewModel.ReimbursementDescription = dialog.Description;
+            viewModel.ScheduleAutosave();
         }
     }
 
@@ -146,6 +150,27 @@ public partial class MainWindow : Window
         }
 
         Process.Start(new ProcessStartInfo(attachment.FilePath) { UseShellExecute = true });
+    }
+
+    private void AttachmentPreview_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not AttachmentRecord attachment) return;
+        new AttachmentPreviewWindow(attachment.FilePath) { Owner = this }.ShowDialog();
+    }
+
+    private void AttachmentMoveUp_Click(object sender, RoutedEventArgs e) => MoveAttachment(sender, -1);
+    private void AttachmentMoveDown_Click(object sender, RoutedEventArgs e) => MoveAttachment(sender, 1);
+
+    private void MoveAttachment(object sender, int direction)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not AttachmentRecord attachment || DataContext is not MainViewModel viewModel || viewModel.SelectedRecord is null) return;
+        var collection = viewModel.SelectedRecord.AttachedDocuments;
+        var invoiceOffset = collection.Count > 0 && collection[0].AttachmentType == AttachmentType.Invoice ? 1 : 0;
+        var oldIndex = collection.IndexOf(attachment);
+        var newIndex = Math.Clamp(oldIndex + direction, invoiceOffset, collection.Count - 1);
+        if (oldIndex == newIndex) return;
+        collection.Move(oldIndex, newIndex);
+        viewModel.ScheduleAutosave();
     }
 
     private void AttachmentDelete_Click(object sender, RoutedEventArgs e)
@@ -250,5 +275,221 @@ public partial class MainWindow : Window
     private void ComboBox_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         e.Handled = true;
+    }
+
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.F)
+        {
+            InvoiceSearchBox.Focus();
+            InvoiceSearchBox.SelectAll();
+            e.Handled = true;
+            return;
+        }
+
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.O && viewModel.ImportCommand.CanExecute(null))
+        {
+            viewModel.ImportCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.S && viewModel.SaveProjectCommand.CanExecute(null))
+        {
+            viewModel.SaveProjectCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Escape && viewModel.ClearSearchCommand.CanExecute(null))
+        {
+            viewModel.ClearSearchCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private async void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.TryRestoreAutosave();
+            await CheckForUpdatesAsync(viewModel, showWhenCurrent: false);
+        }
+    }
+
+    private void Window_Closing(object? sender, CancelEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.FlushAutosave();
+        }
+    }
+
+    private async void BulkEdit_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel) return;
+        var selected = InvoiceGrid.SelectedItems.Cast<InvoiceRecord>().ToList();
+        if (selected.Count == 0 && viewModel.SelectedRecord is not null) selected.Add(viewModel.SelectedRecord);
+        if (selected.Count == 0)
+        {
+            MessageBox.Show("请先选择需要批量编辑的发票。\n按住 Ctrl 或 Shift 可以选择多行。", "尚未选择发票", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new BulkEditWindow(selected.Count) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+        if (dialog.Request.RemoveFromList)
+        {
+            var result = MessageBox.Show($"确定从列表移除选中的 {selected.Count} 张发票吗？\n\n原始 PDF 不会被删除。", "确认批量移除", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes) return;
+        }
+        await viewModel.ApplyBulkEditAsync(selected, dialog.Request);
+    }
+
+    private void QuickReview_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel) return;
+        var pending = viewModel.Records.Where(record => record.Category == InvoiceCategory.Unknown || record.Status is RecordStatus.NeedConfirmation or RecordStatus.Error).OrderBy(record => record.DisplayIndex).ToList();
+        if (pending.Count == 0)
+        {
+            MessageBox.Show("当前没有需要人工确认分类的发票。", "无需复核", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var dialog = new QuickReviewWindow(pending) { Owner = this };
+        dialog.ShowDialog();
+        viewModel.CompleteQuickReview(pending.Take(dialog.ReviewedCount), dialog.ReviewedCount, pending.Count);
+        if (dialog.LastReviewedRecord is not null) viewModel.SelectedRecord = dialog.LastReviewedRecord;
+    }
+
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel) return;
+        var dialog = new SettingsWindow(viewModel.GetSettings(), viewModel.LearnedCorrectionCount) { Owner = this };
+        if (dialog.ShowDialog() == true) viewModel.ApplySettings(dialog.ResultSettings, dialog.ClearLearningRequested);
+    }
+
+    private void ProjectMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel || sender is not Button button) return;
+        var menu = BuildProjectMenu(viewModel);
+        menu.PlacementTarget = button;
+        menu.Placement = PlacementMode.Bottom;
+        menu.HorizontalOffset = -8;
+        menu.VerticalOffset = 4;
+        menu.IsOpen = true;
+    }
+
+    private ContextMenu BuildProjectMenu(MainViewModel viewModel)
+    {
+        var menu = new ContextMenu
+        {
+            Style = (Style)FindResource("ModernContextMenuStyle")
+        };
+        menu.Items.Add(CreateMenuItem("新建项目", "\uE710", viewModel.NewProjectCommand));
+        menu.Items.Add(CreateMenuItem("打开项目…", "\uE8E5", viewModel.OpenProjectCommand));
+        menu.Items.Add(CreateMenuSeparator());
+        menu.Items.Add(CreateMenuItem("保存项目", "\uE74E", viewModel.SaveProjectCommand));
+        menu.Items.Add(CreateMenuItem("项目另存为…", "\uE792", viewModel.SaveProjectAsCommand));
+        var recent = viewModel.RecentProjects;
+        if (recent.Count > 0)
+        {
+            menu.Items.Add(CreateMenuSeparator());
+            var recentRoot = CreateMenuItem("最近项目", "\uE81C");
+            foreach (var path in recent)
+            {
+                var item = CreateMenuItem(Path.GetFileNameWithoutExtension(path), "\uE8A5");
+                item.ToolTip = path;
+                item.Click += (_, _) => viewModel.OpenProjectPath(path);
+                recentRoot.Items.Add(item);
+            }
+            menu.Items.Add(recentRoot);
+        }
+        menu.Items.Add(CreateMenuSeparator());
+        var updateItem = CreateMenuItem("检查更新…", "\uE895");
+        updateItem.Click += async (_, _) => await CheckForUpdatesAsync(viewModel, showWhenCurrent: true);
+        menu.Items.Add(updateItem);
+        return menu;
+    }
+
+    private MenuItem CreateMenuItem(string header, string glyph, System.Windows.Input.ICommand? command = null) => new()
+    {
+        Header = CreateMenuHeader(header, glyph),
+        Command = command,
+        Style = (Style)FindResource("ModernMenuItemStyle")
+    };
+
+    private Separator CreateMenuSeparator() => new()
+    {
+        Style = (Style)FindResource("ModernMenuSeparatorStyle")
+    };
+
+    private static FrameworkElement CreateMenuHeader(string text, string glyph)
+    {
+        var panel = new Grid();
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var icon = new TextBlock
+        {
+            Text = glyph,
+            FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"),
+            FontSize = 15,
+            Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105)),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var label = new TextBlock
+        {
+            Text = text,
+            FontFamily = new System.Windows.Media.FontFamily("Microsoft YaHei UI"),
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            MaxWidth = 300
+        };
+        Grid.SetColumn(label, 1);
+        panel.Children.Add(icon);
+        panel.Children.Add(label);
+        return panel;
+    }
+
+    private async Task CheckForUpdatesAsync(MainViewModel viewModel, bool showWhenCurrent)
+    {
+        if (!showWhenCurrent && !viewModel.GetSettings().CheckForUpdatesOnStartup) return;
+        try
+        {
+            var result = await new UpdateCheckService().CheckAsync();
+            if (showWhenCurrent && result.LatestVersion is null)
+            {
+                MessageBox.Show($"已连接到 GitHub Release，但最新版本号无法识别。\n\n请确认 Release 标签使用类似 v0.2.1 的格式。\n当前检测到：{result.Tag}", "检查更新", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (result.HasUpdate && (showWhenCurrent || !string.Equals(viewModel.GetSettings().IgnoredUpdateTag, result.Tag, StringComparison.OrdinalIgnoreCase)))
+            {
+                var dialog = new UpdateAvailableWindow(result) { Owner = this };
+                var answer = dialog.ShowDialog();
+                if (dialog.IgnoreThisVersion) viewModel.IgnoreUpdateTag(result.Tag);
+                if (answer == true && Uri.TryCreate(result.ReleaseUrl, UriKind.Absolute, out var uri))
+                {
+                    Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+                }
+            }
+            else if (showWhenCurrent)
+            {
+                MessageBox.Show($"当前已经是最新版本 v{result.CurrentVersion.ToString(3)}。", "检查更新", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch when (!showWhenCurrent)
+        {
+            // 启动时静默检查失败不打扰用户。
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"暂时无法检查更新。\n\n{ex.Message}", "检查更新失败", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 }
