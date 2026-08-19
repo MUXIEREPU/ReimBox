@@ -12,7 +12,8 @@ public sealed class InvoiceClassificationService
         (TravelSubCategory.Taxi, ["出租车", "网约车", "滴滴", "打车"]),
         (TravelSubCategory.RentalCar, ["租车"]),
         (TravelSubCategory.Toll, ["高速公路", "通行费", "路桥"]),
-        (TravelSubCategory.Fuel, ["燃油", "加油"])
+        (TravelSubCategory.Fuel, ["燃油", "加油"]),
+        (TravelSubCategory.Meal, ["餐饮", "餐费", "伙食", "用餐", "食堂", "饮食服务", "餐厅服务"])
     ];
     private static readonly string[] ThreeDPrintKeywords = ["3D打印", "3D 打印", "三维打印", "增材制造", "快速成型"];
     private static readonly string[] PrintFeeKeywords =

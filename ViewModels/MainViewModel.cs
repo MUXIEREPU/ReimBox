@@ -32,6 +32,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     private bool _isImportDragOver;
     private bool _isAttachmentDragOver;
     private bool _isPreviewMode;
+    private bool _isPdfPreviewWindowOpen;
     private bool _isPdfPreviewLoading;
     private InvoiceListFilter _activeFilter = InvoiceListFilter.All;
     private string _progressMessage = "就绪";
@@ -76,7 +77,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
             RecheckCommand.RaiseCanExecuteChanged();
             UndoDeleteCommand.RaiseCanExecuteChanged();
             DismissDuplicateCommand.RaiseCanExecuteChanged();
-            if (IsPreviewMode)
+            if (IsPreviewMode || IsPdfPreviewWindowOpen)
             {
                 _ = LoadPdfPreviewAsync(0);
             }
@@ -116,6 +117,22 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     public bool IsAttachmentDragOver { get => _isAttachmentDragOver; set { _isAttachmentDragOver = value; OnChanged(); } }
     public bool IsPreviewMode { get => _isPreviewMode; private set { _isPreviewMode = value; OnChanged(); OnChanged(nameof(IsDetailMode)); } }
     public bool IsDetailMode => !IsPreviewMode;
+    public bool IsPdfPreviewWindowOpen
+    {
+        get => _isPdfPreviewWindowOpen;
+        set
+        {
+            _isPdfPreviewWindowOpen = value;
+            OnChanged();
+            PreviousPdfPageCommand.RaiseCanExecuteChanged();
+            NextPdfPageCommand.RaiseCanExecuteChanged();
+            ResetPdfPreviewCommand.RaiseCanExecuteChanged();
+            if (value && SelectedRecord is not null)
+            {
+                _ = LoadPdfPreviewAsync(0);
+            }
+        }
+    }
     public bool IsPdfPreviewLoading { get => _isPdfPreviewLoading; private set { _isPdfPreviewLoading = value; OnChanged(); PreviousPdfPageCommand.RaiseCanExecuteChanged(); NextPdfPageCommand.RaiseCanExecuteChanged(); ResetPdfPreviewCommand.RaiseCanExecuteChanged(); } }
     public double PdfPreviewZoom { get => _pdfPreviewZoom; set { _pdfPreviewZoom = Math.Clamp(value, 0.25, 5.0); OnChanged(); OnChanged(nameof(PdfPreviewZoomPercent)); } }
     public string PdfPreviewZoomPercent => $"{PdfPreviewZoom:P0}";
@@ -267,9 +284,9 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         RevealSelectedFileCommand = new RelayCommand(RevealSelectedFile, () => SelectedRecord is not null && File.Exists(SelectedRecord.OriginalFilePath));
         DeleteSelectedCommand = new RelayCommand(DeleteSelected, () => SelectedRecord is not null && !IsBusy);
         ChooseAttachmentFilesCommand = new RelayCommand(ChooseAttachmentFiles, () => SelectedRecord is not null && !IsBusy);
-        PreviousPdfPageCommand = new RelayCommand(() => _ = LoadPdfPreviewAsync(PdfPreviewPageIndex - 1), () => IsPreviewMode && !IsPdfPreviewLoading && PdfPreviewPageIndex > 0);
-        NextPdfPageCommand = new RelayCommand(() => _ = LoadPdfPreviewAsync(PdfPreviewPageIndex + 1), () => IsPreviewMode && !IsPdfPreviewLoading && PdfPreviewPageCount > 0 && PdfPreviewPageIndex < PdfPreviewPageCount - 1);
-        ResetPdfPreviewCommand = new RelayCommand(() => PdfPreviewZoom = 1.0, () => IsPreviewMode && PdfPreviewImage is not null && !IsPdfPreviewLoading);
+        PreviousPdfPageCommand = new RelayCommand(() => _ = LoadPdfPreviewAsync(PdfPreviewPageIndex - 1), () => (IsPreviewMode || IsPdfPreviewWindowOpen) && !IsPdfPreviewLoading && PdfPreviewPageIndex > 0);
+        NextPdfPageCommand = new RelayCommand(() => _ = LoadPdfPreviewAsync(PdfPreviewPageIndex + 1), () => (IsPreviewMode || IsPdfPreviewWindowOpen) && !IsPdfPreviewLoading && PdfPreviewPageCount > 0 && PdfPreviewPageIndex < PdfPreviewPageCount - 1);
+        ResetPdfPreviewCommand = new RelayCommand(() => PdfPreviewZoom = 1.0, () => (IsPreviewMode || IsPdfPreviewWindowOpen) && PdfPreviewImage is not null && !IsPdfPreviewLoading);
         ClearSearchCommand = new RelayCommand(() => SearchText = "", () => HasSearchText);
         UndoDeleteCommand = new RelayCommand(UndoDelete, () => HasUndoDelete && !IsBusy);
         DismissDuplicateCommand = new RelayCommand(DismissSelectedDuplicate, () => SelectedRecord?.IsPossibleDuplicate == true && !IsBusy);
@@ -783,6 +800,20 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         RefreshStats();
         ScheduleAutosave();
         ProgressMessage = $"已批量处理 {records.Count} 张发票";
+    }
+
+    public void RefreshAfterBulkCategoryEdit(IReadOnlyList<InvoiceRecord> records)
+    {
+        foreach (var record in records)
+        {
+            _rules.Evaluate(record);
+            if (record.ManualOverride) _learning.Remember(record);
+        }
+        _duplicateInvoices.Evaluate(Records.ToList());
+        RecordsView.Refresh();
+        RefreshStats();
+        ScheduleAutosave();
+        ProgressMessage = $"已批量修改 {records.Count} 张发票的分类";
     }
 
     public void CompleteQuickReview(IEnumerable<InvoiceRecord> reviewedRecords, int reviewedCount, int totalCount)

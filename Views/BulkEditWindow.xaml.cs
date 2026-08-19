@@ -28,6 +28,7 @@ public partial class BulkEditWindow : Window
             new EnumOption<TravelSubCategory>(TravelSubCategory.RentalCar, "租车"),
             new EnumOption<TravelSubCategory>(TravelSubCategory.Toll, "路桥费"),
             new EnumOption<TravelSubCategory>(TravelSubCategory.Fuel, "燃油费"),
+            new EnumOption<TravelSubCategory>(TravelSubCategory.Meal, "伙食费"),
             new EnumOption<TravelSubCategory>(TravelSubCategory.OtherTravel, "其他差旅")
         };
         SubCategoryBox.SelectedIndex = 0;

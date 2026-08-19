@@ -841,6 +841,7 @@
                                   SelectionMode="Extended"
                                   SelectionUnit="FullRow"
                                   AutoGenerateColumns="False"
+                                  SelectionChanged="InvoiceGrid_SelectionChanged"
                                   KeyDown="InvoiceGrid_KeyDown">
                             <DataGrid.Resources>
                                 <Style TargetType="TextBlock">
@@ -967,11 +968,27 @@
 
                             <Border Style="{StaticResource SectionCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="分类" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,10" />
+                                    <DockPanel Margin="0,0,0,10">
+                                        <TextBlock x:Name="BulkCategoryHint" DockPanel.Dock="Right"
+                                                   Text="" Foreground="#1D4ED8" FontSize="12"
+                                                   VerticalAlignment="Center"
+                                                   Visibility="Collapsed" />
+                                        <TextBlock Text="分类" FontWeight="SemiBold" Foreground="#334155" />
+                                    </DockPanel>
                                     <TextBlock Text="一级分类" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,5" />
-                                    <ComboBox ItemsSource="{Binding CategoryOptions}" SelectedValue="{Binding Category}" SelectedValuePath="Value" DisplayMemberPath="Label" />
+                                    <ComboBox x:Name="CategoryCombo"
+                                              ItemsSource="{Binding CategoryOptions}"
+                                              SelectedValue="{Binding Category}"
+                                              SelectedValuePath="Value"
+                                              DisplayMemberPath="Label"
+                                              SelectionChanged="CategoryCombo_SelectionChanged" />
                                     <TextBlock Text="二级分类" Foreground="{StaticResource MutedTextBrush}" Margin="0,12,0,5" />
-                                    <ComboBox ItemsSource="{Binding SubCategoryOptions}" SelectedValue="{Binding SubCategory}" SelectedValuePath="Value" DisplayMemberPath="Label" />
+                                    <ComboBox x:Name="SubCategoryCombo"
+                                              ItemsSource="{Binding SubCategoryOptions}"
+                                              SelectedValue="{Binding SubCategory}"
+                                              SelectedValuePath="Value"
+                                              DisplayMemberPath="Label"
+                                              SelectionChanged="SubCategoryCombo_SelectionChanged" />
                                 </StackPanel>
                             </Border>
 
@@ -1181,6 +1198,7 @@
                             <Button Content="上一页" Command="{Binding DataContext.PreviousPdfPageCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,0,10,8" />
                             <Button Content="下一页" Command="{Binding DataContext.NextPdfPageCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,0,10,8" />
                             <Button Content="适应窗口" Command="{Binding DataContext.ResetPdfPreviewCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,0,10,8" />
+                            <Button Content="弹出窗口" Click="PdfPreviewDetach_Click" Margin="0,0,10,8" ToolTip="将 PDF 预览弹出为独立窗口" />
                             <Button Content="打开 PDF" Command="{Binding DataContext.OpenSelectedFileCommand, RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,10,8" />
                             <Button Content="在文件夹中定位" Command="{Binding DataContext.RevealSelectedFileCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,0,0,8" />
                         </WrapPanel>

@@ -14,6 +14,9 @@ public partial class MainWindow : Window
     private Point? _pdfPreviewDragStartPoint;
     private double _pdfPreviewDragStartHorizontalOffset;
     private double _pdfPreviewDragStartVerticalOffset;
+    private bool _isGridSelectionChanging;
+    private bool _isBulkCategoryApplying;
+    private PdfPreviewWindow? _pdfPreviewWindow;
 
     public MainWindow()
     {
@@ -261,6 +264,28 @@ public partial class MainWindow : Window
         scrollViewer.Cursor = Cursors.Hand;
     }
 
+    private void PdfPreviewDetach_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel) return;
+        if (viewModel.SelectedRecord is null)
+        {
+            MessageBox.Show("请先选择一张 PDF 发票。", "暂无预览", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (_pdfPreviewWindow is { IsVisible: true })
+        {
+            if (_pdfPreviewWindow.WindowState == WindowState.Minimized)
+                _pdfPreviewWindow.WindowState = WindowState.Normal;
+            _pdfPreviewWindow.Activate();
+            return;
+        }
+
+        _pdfPreviewWindow = new PdfPreviewWindow(viewModel) { Owner = this };
+        _pdfPreviewWindow.Closed += (_, _) => _pdfPreviewWindow = null;
+        _pdfPreviewWindow.Show();
+    }
+
     private void InvoiceGrid_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Delete || DataContext is not MainViewModel viewModel || !viewModel.DeleteSelectedCommand.CanExecute(null))
@@ -270,6 +295,108 @@ public partial class MainWindow : Window
 
         viewModel.DeleteSelectedCommand.Execute(null);
         e.Handled = true;
+    }
+
+    private void InvoiceGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        _isGridSelectionChanging = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _isGridSelectionChanging = false;
+            UpdateBulkCategoryHint();
+        }), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    private void UpdateBulkCategoryHint()
+    {
+        var count = InvoiceGrid.SelectedItems.Count;
+        if (count > 1 && DataContext is MainViewModel)
+        {
+            BulkCategoryHint.Text = $"已选 {count} 张，修改将批量应用";
+            BulkCategoryHint.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            BulkCategoryHint.Text = "";
+            BulkCategoryHint.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void CategoryCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isGridSelectionChanging || _isBulkCategoryApplying || DataContext is not MainViewModel viewModel)
+            return;
+
+        var selected = InvoiceGrid.SelectedItems.Cast<InvoiceRecord>().ToList();
+        if (selected.Count <= 1 || CategoryCombo.SelectedValue is not InvoiceCategory category)
+            return;
+
+        _isBulkCategoryApplying = true;
+        try
+        {
+            foreach (var record in selected)
+            {
+                record.Category = category;
+                if (category != InvoiceCategory.Travel)
+                    record.SubCategory = TravelSubCategory.None;
+                record.ManualOverride = true;
+            }
+        }
+        finally
+        {
+            _isBulkCategoryApplying = false;
+        }
+
+        viewModel.RefreshAfterBulkCategoryEdit(selected);
+        RestoreGridSelection(selected);
+    }
+
+    private void SubCategoryCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isGridSelectionChanging || _isBulkCategoryApplying || DataContext is not MainViewModel viewModel)
+            return;
+
+        var selected = InvoiceGrid.SelectedItems.Cast<InvoiceRecord>().ToList();
+        if (selected.Count <= 1 || SubCategoryCombo.SelectedValue is not TravelSubCategory subCategory)
+            return;
+
+        _isBulkCategoryApplying = true;
+        try
+        {
+            foreach (var record in selected)
+            {
+                if (record.Category == InvoiceCategory.Travel)
+                {
+                    record.SubCategory = subCategory;
+                    record.ManualOverride = true;
+                }
+            }
+        }
+        finally
+        {
+            _isBulkCategoryApplying = false;
+        }
+
+        viewModel.RefreshAfterBulkCategoryEdit(selected);
+        RestoreGridSelection(selected);
+    }
+
+    private void RestoreGridSelection(List<InvoiceRecord> records)
+    {
+        var valid = records.Where(r => InvoiceGrid.Items.Contains(r)).ToList();
+        if (valid.Count == 0) return;
+
+        _isGridSelectionChanging = true;
+        InvoiceGrid.SelectedItems.Clear();
+        foreach (var record in valid)
+        {
+            InvoiceGrid.SelectedItems.Add(record);
+        }
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _isGridSelectionChanging = false;
+            UpdateBulkCategoryHint();
+        }), System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private void ComboBox_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -324,6 +451,7 @@ public partial class MainWindow : Window
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
+        _pdfPreviewWindow?.Close();
         if (DataContext is MainViewModel viewModel)
         {
             viewModel.FlushAutosave();

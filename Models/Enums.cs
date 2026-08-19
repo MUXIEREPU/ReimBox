@@ -8,7 +8,7 @@ public enum InvoiceCategory
     Other = 4,
     ShippingFee = 5
 }
-public enum TravelSubCategory { None, Flight, Train, Hotel, Taxi, RentalCar, Toll, Fuel, OtherTravel }
+public enum TravelSubCategory { None, Flight, Train, Hotel, Taxi, RentalCar, Toll, Fuel, Meal, OtherTravel }
 public enum AttachmentType { Invoice, PaymentProof, OrderPage, ThreeDPrintDetails, Other }
 public enum RecordStatus { Analyzing, Complete, MissingDocuments, NeedConfirmation, Error, Ignored }
 public enum RecognitionSource { None, NativePdfText, PaddleOcrVl16, WindowsOcr }

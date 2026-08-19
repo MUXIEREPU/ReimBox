@@ -28,6 +28,7 @@ public partial class QuickReviewWindow : Window
             new EnumOption<TravelSubCategory>(TravelSubCategory.Train, "火车"), new EnumOption<TravelSubCategory>(TravelSubCategory.Hotel, "住宿"),
             new EnumOption<TravelSubCategory>(TravelSubCategory.Taxi, "出租车/网约车"), new EnumOption<TravelSubCategory>(TravelSubCategory.RentalCar, "租车"),
             new EnumOption<TravelSubCategory>(TravelSubCategory.Toll, "路桥费"), new EnumOption<TravelSubCategory>(TravelSubCategory.Fuel, "燃油费"),
+            new EnumOption<TravelSubCategory>(TravelSubCategory.Meal, "伙食费"),
             new EnumOption<TravelSubCategory>(TravelSubCategory.OtherTravel, "其他差旅")
         };
         ShowCurrent();

@@ -163,6 +163,7 @@ public sealed class InvoiceRecord : INotifyPropertyChanged
         new(TravelSubCategory.RentalCar, "租车"),
         new(TravelSubCategory.Toll, "路桥费"),
         new(TravelSubCategory.Fuel, "燃油费"),
+        new(TravelSubCategory.Meal, "伙食费"),
         new(TravelSubCategory.OtherTravel, "其他差旅")
     ];
 
@@ -187,6 +188,7 @@ public sealed class InvoiceRecord : INotifyPropertyChanged
         TravelSubCategory.RentalCar => "租车",
         TravelSubCategory.Toll => "路桥费",
         TravelSubCategory.Fuel => "燃油费",
+        TravelSubCategory.Meal => "伙食费",
         TravelSubCategory.OtherTravel => "其他差旅",
         _ => ""
     };
