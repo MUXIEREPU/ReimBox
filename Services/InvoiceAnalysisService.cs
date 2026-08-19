@@ -13,8 +13,12 @@ public sealed class InvoiceAnalysisService(
 {
     private static readonly Regex DatePattern = new(@"(?:开票日期|日期)?\s*[:：]?\s*(?<year>20\d{2})\s*[年/\-.]\s*(?<month>\d{1,2})\s*[月/\-.]\s*(?<day>\d{1,2})\s*日?", RegexOptions.Compiled);
     private static readonly Regex InvoiceNumberPattern = new(@"(?:发票号码|号码)\s*[:：]?\s*(?<number>\d{8,30})", RegexOptions.Compiled);
-    private static readonly Regex SellerPattern = new(@"(?:销售方信息|销售方|销方)[\s\S]{0,80}?(?:名称)\s*[:：]?\s*(?<seller>[^\r\n]+)", RegexOptions.Compiled);
-    private static readonly Regex AnyNamePattern = new(@"(?:名称)\s*[:：]?\s*(?<name>[\u4e00-\u9fffA-Za-z0-9（）()·\-]{2,80})", RegexOptions.Compiled);
+    private static readonly Regex SellerPattern = new(
+        @"(?:销\s*名称|销售方名称|销方名称|销售方信息[\s\S]{0,40}?名称|销售方[\s\S]{0,40}?名称|销方[\s\S]{0,40}?名称)\s*[:：]?\s*(?<seller>[^\r\n]+)",
+        RegexOptions.Compiled);
+    private static readonly Regex AnyNamePattern = new(
+        @"(?<!项目)名称\s*[:：]\s*(?<name>[\u4e00-\u9fffA-Za-z0-9（）()·\-]{2,80})",
+        RegexOptions.Compiled);
     private static readonly Regex TotalWithSmallPattern = new(@"(?:价税合计|小写)[\s\S]{0,80}?[¥￥]?\s*(?<amount>\d{1,10}(?:\.\d{1,2})?)", RegexOptions.Compiled);
     private static readonly Regex AmountPattern = new(@"(?:金额|合计|价税合计|小写)\s*[:：]?\s*[¥￥]?\s*(?<amount>\d{1,10}(?:\.\d{1,2})?)", RegexOptions.Compiled);
     private static readonly Regex CurrencyPattern = new(@"[¥￥]\s*(?<amount>\d{1,10}(?:\.\d{1,2})?)", RegexOptions.Compiled);
