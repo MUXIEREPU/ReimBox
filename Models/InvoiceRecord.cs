@@ -89,6 +89,8 @@ public sealed class InvoiceRecord : INotifyPropertyChanged
     }
 
     public double Confidence { get; set; }
+    private double _classificationConfidence;
+    public double ClassificationConfidence { get => _classificationConfidence; set => Set(ref _classificationConfidence, Math.Clamp(value, 0, 1)); }
     public string RecognitionSummary { get; set; } = "尚未识别";
     public RecognitionSource RecognitionSource { get; set; }
     public string? ExtractedText { get; set; }
@@ -144,28 +146,9 @@ public sealed class InvoiceRecord : INotifyPropertyChanged
         : SupplementAttachments.FirstOrDefault(attachment => !File.Exists(attachment.FilePath)) is { } missing
             ? $"附件不存在：{missing.FileName}"
             : "";
-    public IReadOnlyList<EnumOption<InvoiceCategory>> CategoryOptions { get; } =
-    [
-        new(InvoiceCategory.Consumable, "耗材"),
-        new(InvoiceCategory.Travel, "差旅"),
-        new(InvoiceCategory.PrintFee, "打印费"),
-        new(InvoiceCategory.ShippingFee, "邮寄费"),
-        new(InvoiceCategory.Other, "其他")
-    ];
+    public IReadOnlyList<EnumOption<InvoiceCategory>> CategoryOptions => InvoiceOptionCatalog.Categories;
 
-    public IReadOnlyList<EnumOption<TravelSubCategory>> SubCategoryOptions { get; } =
-    [
-        new(TravelSubCategory.None, "无"),
-        new(TravelSubCategory.Flight, "飞机"),
-        new(TravelSubCategory.Train, "火车"),
-        new(TravelSubCategory.Hotel, "住宿"),
-        new(TravelSubCategory.Taxi, "出租车/网约车"),
-        new(TravelSubCategory.RentalCar, "租车"),
-        new(TravelSubCategory.Toll, "路桥费"),
-        new(TravelSubCategory.Fuel, "燃油费"),
-        new(TravelSubCategory.Meal, "伙食费"),
-        new(TravelSubCategory.OtherTravel, "其他差旅")
-    ];
+    public IReadOnlyList<EnumOption<TravelSubCategory>> SubCategoryOptions => InvoiceOptionCatalog.TravelSubCategories;
 
     public string CategoryDisplay => Category == InvoiceCategory.Travel && SubCategory != TravelSubCategory.None
         ? $"差旅 / {SubCategoryDisplay}"

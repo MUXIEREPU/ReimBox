@@ -86,4 +86,4 @@ dotnet run --project Tools/RecognitionVerifier/RecognitionVerifier.csproj -c Rel
 
 ## 当前版本
 
-v0.2.1
+v0.3.0

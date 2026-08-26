@@ -75,11 +75,22 @@ public sealed class InvoiceAnalysisService(
         record.Amount = totals.Amount ?? record.Amount;
         record.Tax = totals.Tax ?? record.Tax;
         record.TotalAmount = ExtractTotalAmount(text) ?? record.TotalAmount;
+        var amountFromFileName = false;
+        if (record.TotalAmount is null && source != RecognitionSource.NativePdfText && LooksLikeInvoice(text) && ExtractAmountFromFileName(record.OriginalFilePath) is { } fileNameAmount)
+        {
+            record.TotalAmount = fileNameAmount;
+            amountFromFileName = true;
+        }
 
         classifier.Classify(record, text);
         record.RecognitionSource = source;
         record.Confidence = Score(record, text);
         validator.Validate(record);
+        if (amountFromFileName)
+        {
+            record.ValidationIssues.Add(new("AMOUNT_FROM_FILENAME", ValidationSeverity.Warning, "票面 OCR 未读出金额，已采用文件名中的金额，请人工核对"));
+            record.OnChanged(nameof(record.ValidationDisplays));
+        }
         record.RecognitionSummary = $"{method} · {text.Length} 个字符 · {record.ValidationIssues.Count} 项校验提示";
 
         record.OnChanged(nameof(record.InvoiceDate));
@@ -95,8 +106,14 @@ public sealed class InvoiceAnalysisService(
 
     private static decimal? ExtractTotalAmount(string text)
     {
+        var combinedTotal = ExtractCombinedInvoiceTotal(text);
+        if (combinedTotal is not null) return combinedTotal;
+
         var exact = TotalWithSmallPattern.Match(text);
         if (TryDecimal(exact, out var total)) return total;
+
+        var aviationTotal = ExtractAviationTotal(text);
+        if (aviationTotal is not null) return aviationTotal;
 
         var amounts = AmountPattern.Matches(text)
             .Cast<Match>()
@@ -108,6 +125,64 @@ public sealed class InvoiceAnalysisService(
         return amounts.Length == 0 ? null : amounts.Max();
     }
 
+    private static decimal? ExtractCombinedInvoiceTotal(string text)
+    {
+        var invoiceMatches = InvoiceNumberPattern.Matches(text).Cast<Match>().ToArray();
+        var distinctNumbers = invoiceMatches.Select(match => match.Groups["number"].Value).Distinct().ToArray();
+        if (distinctNumbers.Length <= 1) return null;
+
+        var totals = new List<decimal>();
+        var processedNumbers = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < invoiceMatches.Length; i++)
+        {
+            var current = invoiceMatches[i];
+            var number = current.Groups["number"].Value;
+            if (!processedNumbers.Add(number)) continue;
+
+            var end = text.Length;
+            for (var next = i + 1; next < invoiceMatches.Length; next++)
+            {
+                if (invoiceMatches[next].Groups["number"].Value == number) continue;
+                end = invoiceMatches[next].Index;
+                break;
+            }
+
+            var segment = text[current.Index..end];
+            var totalMatch = TotalWithSmallPattern.Match(segment);
+            if (TryDecimal(totalMatch, out var segmentTotal)) totals.Add(segmentTotal);
+        }
+
+        return totals.Count > 1 ? totals.Sum() : null;
+    }
+
+    private static decimal? ExtractAviationTotal(string text)
+    {
+        var section = Regex.Match(text, @"票价[\s\S]{0,120}?合计(?<values>[\s\S]{0,240}?)(?:电子客票号码|验证码|销售网点|$)", RegexOptions.IgnoreCase);
+        if (!section.Success) return null;
+
+        var values = Regex.Matches(section.Groups["values"].Value, @"(?:CNY|[¥￥])\s*(?<amount>\d{1,10}(?:\.\d{1,2})?)", RegexOptions.IgnoreCase)
+            .Cast<Match>()
+            .Select(match => TryDecimal(match, out var value) ? value : 0)
+            .Where(value => value > 0 && value < 10_000_000)
+            .ToArray();
+        return values.Length == 0 ? null : values[^1];
+    }
+
+    private static decimal? ExtractAmountFromFileName(string filePath)
+    {
+        var fileName = Path.GetFileNameWithoutExtension(filePath);
+        var matches = Regex.Matches(fileName, @"(?<amount>\d+(?:\.\d{1,2})?)\s*元(?!运费|邮费|快递费)");
+        if (matches.Count == 0) return null;
+        return TryDecimal(matches[^1], out var amount) ? amount : null;
+    }
+
+    private static bool LooksLikeInvoice(string text)
+    {
+        var compact = Regex.Replace(text, @"\s+", string.Empty);
+        return compact.Contains("发票", StringComparison.Ordinal)
+               || compact.Contains("票价", StringComparison.Ordinal)
+               || compact.Contains("座位号", StringComparison.Ordinal);
+    }
     private static DateTime? ExtractDate(string text)
     {
         var match = DatePattern.Match(text);

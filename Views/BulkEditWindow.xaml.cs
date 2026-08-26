@@ -9,36 +9,11 @@ public partial class BulkEditWindow : Window
     {
         InitializeComponent();
         CountText.Text = $"已选择 {selectedCount} 张发票";
-        CategoryBox.ItemsSource = new[]
-        {
-            new EnumOption<InvoiceCategory>(InvoiceCategory.Consumable, "耗材"),
-            new EnumOption<InvoiceCategory>(InvoiceCategory.Travel, "差旅"),
-            new EnumOption<InvoiceCategory>(InvoiceCategory.PrintFee, "打印费"),
-            new EnumOption<InvoiceCategory>(InvoiceCategory.ShippingFee, "邮寄费"),
-            new EnumOption<InvoiceCategory>(InvoiceCategory.Other, "其他")
-        };
+        CategoryBox.ItemsSource = InvoiceOptionCatalog.Categories;
         CategoryBox.SelectedIndex = 0;
-        SubCategoryBox.ItemsSource = new[]
-        {
-            new EnumOption<TravelSubCategory>(TravelSubCategory.None, "无"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.Flight, "飞机"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.Train, "火车"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.Hotel, "住宿"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.Taxi, "出租车/网约车"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.RentalCar, "租车"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.Toll, "路桥费"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.Fuel, "燃油费"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.Meal, "伙食费"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.OtherTravel, "其他差旅")
-        };
+        SubCategoryBox.ItemsSource = InvoiceOptionCatalog.TravelSubCategories;
         SubCategoryBox.SelectedIndex = 0;
-        AttachmentTypeBox.ItemsSource = new[]
-        {
-            new EnumOption<AttachmentType>(AttachmentType.PaymentProof, "支付记录截图"),
-            new EnumOption<AttachmentType>(AttachmentType.OrderPage, "订单页面"),
-            new EnumOption<AttachmentType>(AttachmentType.ThreeDPrintDetails, "3D打印明细"),
-            new EnumOption<AttachmentType>(AttachmentType.Other, "其他材料")
-        };
+        AttachmentTypeBox.ItemsSource = InvoiceOptionCatalog.SupplementAttachmentTypes;
         AttachmentTypeBox.SelectedIndex = 0;
     }
 

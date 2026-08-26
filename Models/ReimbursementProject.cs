@@ -28,6 +28,7 @@ public sealed class ProjectInvoiceData
     public InvoiceCategory Category { get; set; }
     public TravelSubCategory SubCategory { get; set; }
     public double Confidence { get; set; }
+    public double ClassificationConfidence { get; set; }
     public string RecognitionSummary { get; set; } = "";
     public RecognitionSource RecognitionSource { get; set; }
     public string? ExtractedText { get; set; }

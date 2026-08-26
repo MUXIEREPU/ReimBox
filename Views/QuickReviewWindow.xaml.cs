@@ -14,23 +14,8 @@ public partial class QuickReviewWindow : Window
     {
         InitializeComponent();
         _records = records.ToList();
-        CategoryBox.ItemsSource = new[]
-        {
-            new EnumOption<InvoiceCategory>(InvoiceCategory.Consumable, "耗材"),
-            new EnumOption<InvoiceCategory>(InvoiceCategory.Travel, "差旅"),
-            new EnumOption<InvoiceCategory>(InvoiceCategory.PrintFee, "打印费"),
-            new EnumOption<InvoiceCategory>(InvoiceCategory.ShippingFee, "邮寄费"),
-            new EnumOption<InvoiceCategory>(InvoiceCategory.Other, "其他")
-        };
-        SubCategoryBox.ItemsSource = new[]
-        {
-            new EnumOption<TravelSubCategory>(TravelSubCategory.None, "无"), new EnumOption<TravelSubCategory>(TravelSubCategory.Flight, "飞机"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.Train, "火车"), new EnumOption<TravelSubCategory>(TravelSubCategory.Hotel, "住宿"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.Taxi, "出租车/网约车"), new EnumOption<TravelSubCategory>(TravelSubCategory.RentalCar, "租车"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.Toll, "路桥费"), new EnumOption<TravelSubCategory>(TravelSubCategory.Fuel, "燃油费"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.Meal, "伙食费"),
-            new EnumOption<TravelSubCategory>(TravelSubCategory.OtherTravel, "其他差旅")
-        };
+        CategoryBox.ItemsSource = InvoiceOptionCatalog.Categories;
+        SubCategoryBox.ItemsSource = InvoiceOptionCatalog.TravelSubCategories;
         ShowCurrent();
     }
 
@@ -64,6 +49,7 @@ public partial class QuickReviewWindow : Window
         Current.Category = (InvoiceCategory)(CategoryBox.SelectedValue ?? InvoiceCategory.Consumable);
         Current.SubCategory = Current.Category == InvoiceCategory.Travel ? (TravelSubCategory)(SubCategoryBox.SelectedValue ?? TravelSubCategory.None) : TravelSubCategory.None;
         Current.ManualOverride = true;
+        Current.ClassificationConfidence = 1.0;
         LastReviewedRecord = Current;
         _index++;
         ShowCurrent();

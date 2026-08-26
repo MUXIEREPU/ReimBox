@@ -378,38 +378,34 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     private async Task LoadPdfPreviewAsync(int? requestedPageIndex = null)
     {
         var requestVersion = ++_pdfPreviewRequestVersion;
-        IsPdfPreviewLoading = false;
         var record = SelectedRecord;
-        PdfPreviewZoom = 1.0;
 
         if (record is null)
         {
-            _pdfPreviewPath = null;
-            PdfPreviewImage = null;
-            PdfPreviewPageCount = 0;
-            PdfPreviewPageIndex = 0;
-            PdfPreviewStatus = "请选择一张 PDF 发票进行预览";
+            ClearPdfPreview("请选择一张 PDF 发票进行预览");
             return;
         }
 
         var previewPath = record.OriginalFilePath;
-        if (!string.Equals(previewPath, _pdfPreviewPath, StringComparison.OrdinalIgnoreCase))
+        var pathChanged = !string.Equals(previewPath, _pdfPreviewPath, StringComparison.OrdinalIgnoreCase);
+        if (pathChanged)
         {
             _pdfPreviewPath = null;
             PdfPreviewImage = null;
             PdfPreviewPageCount = 0;
             PdfPreviewPageIndex = 0;
+            PdfPreviewZoom = 1.0;
         }
 
-        if (!File.Exists(record.OriginalFilePath))
+        if (!File.Exists(previewPath))
         {
-            PdfPreviewStatus = "原始文件不存在，无法预览";
+            ClearPdfPreview("原始文件不存在，无法预览");
             return;
         }
 
-        if (!string.Equals(Path.GetExtension(record.OriginalFilePath), ".pdf", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(Path.GetExtension(previewPath), ".pdf", StringComparison.OrdinalIgnoreCase))
         {
-            PdfPreviewStatus = "当前文件不是 PDF，暂不支持在这里预览";
+            ClearPdfPreview("当前文件不是 PDF，暂不支持在这里预览");
             return;
         }
 
@@ -418,17 +414,15 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
 
         try
         {
-            var pageCount = await _pdfPreview.GetPageCountAsync(previewPath);
-            var pageIndex = Math.Clamp(requestedPageIndex ?? PdfPreviewPageIndex, 0, Math.Max(0, pageCount - 1));
-            var image = await _pdfPreview.RenderPageAsync(previewPath, pageIndex);
-            if (requestVersion != _pdfPreviewRequestVersion || !ReferenceEquals(record, SelectedRecord) || !string.Equals(previewPath, SelectedRecord?.OriginalFilePath, StringComparison.OrdinalIgnoreCase))
-            {
+            var pageIndex = requestedPageIndex ?? (pathChanged ? 0 : PdfPreviewPageIndex);
+            var frame = await _pdfPreview.RenderAsync(previewPath, pageIndex);
+            if (requestVersion != _pdfPreviewRequestVersion || !ReferenceEquals(record, SelectedRecord) ||
+                !string.Equals(previewPath, SelectedRecord?.OriginalFilePath, StringComparison.OrdinalIgnoreCase))
                 return;
-            }
 
-            PdfPreviewPageCount = pageCount;
-            PdfPreviewPageIndex = pageIndex;
-            PdfPreviewImage = image;
+            PdfPreviewPageCount = frame.PageCount;
+            PdfPreviewPageIndex = frame.PageIndex;
+            PdfPreviewImage = frame.Image;
             _pdfPreviewPath = previewPath;
             PdfPreviewStatus = "左键按住拖动 · 鼠标滚轮缩放";
             ResetPdfPreviewCommand.RaiseCanExecuteChanged();
@@ -436,17 +430,24 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         catch (Exception ex)
         {
             if (requestVersion == _pdfPreviewRequestVersion && ReferenceEquals(record, SelectedRecord))
-            {
-                PdfPreviewStatus = $"预览失败：{ToFriendlyError(ex)}";
-            }
+                ClearPdfPreview($"预览失败：{ToFriendlyError(ex)}");
         }
         finally
         {
             if (requestVersion == _pdfPreviewRequestVersion)
-            {
                 IsPdfPreviewLoading = false;
-            }
         }
+    }
+
+    private void ClearPdfPreview(string status)
+    {
+        IsPdfPreviewLoading = false;
+        _pdfPreviewPath = null;
+        PdfPreviewImage = null;
+        PdfPreviewPageCount = 0;
+        PdfPreviewPageIndex = 0;
+        PdfPreviewStatus = status;
+        ResetPdfPreviewCommand.RaiseCanExecuteChanged();
     }
 
     private void OpenSelectedFile()
@@ -477,7 +478,10 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
 
     private void ChooseFolder()
     {
-        var dialog = new OpenFolderDialog { Title = "选择发票或报销材料文件夹" };
+        var dialog = new OpenFolderDialog
+        {
+            Title = "选择根文件夹（将递归导入所有子文件夹中的 PDF）"
+        };
         if (dialog.ShowDialog() == true) ImportPaths([dialog.FolderName]);
     }
 
@@ -485,13 +489,23 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     {
         if (IsBusy) return;
 
+        var importPaths = paths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (importPaths.Count == 0) return;
+
+        var includesFolder = importPaths.Any(Directory.Exists);
+
         IsBusy = true;
         IsProgressIndeterminate = true;
         OperationProgress = 0;
-        ProgressMessage = "正在扫描文件并检查重复项…";
+        ProgressMessage = includesFolder
+            ? "正在递归扫描文件夹及其所有子文件夹中的 PDF…"
+            : "正在扫描 PDF 并检查重复项…";
         try
         {
-            var result = await Task.Run(() => _import.Import(paths, _hashes));
+            var result = await Task.Run(() => _import.Import(importPaths, _hashes));
             var imported = result.Records.ToList();
             if (imported.Count == 0)
             {
@@ -752,11 +766,13 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
                     record.Category = request.Category;
                     if (request.Category != InvoiceCategory.Travel) record.SubCategory = TravelSubCategory.None;
                     record.ManualOverride = true;
+                    record.ClassificationConfidence = 1.0;
                 }
                 if (request.ChangeSubCategory && record.Category == InvoiceCategory.Travel)
                 {
                     record.SubCategory = request.SubCategory;
                     record.ManualOverride = true;
+                    record.ClassificationConfidence = 1.0;
                 }
                 if (request.ChangeAttachmentType)
                 {
@@ -802,18 +818,60 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         ProgressMessage = $"已批量处理 {records.Count} 张发票";
     }
 
-    public void RefreshAfterBulkCategoryEdit(IReadOnlyList<InvoiceRecord> records)
+    public int ApplyInlineCategoryEdit(
+        IReadOnlyList<InvoiceRecord> records,
+        InvoiceCategory? category,
+        TravelSubCategory? subCategory)
     {
-        foreach (var record in records)
+        if (records.Count == 0 || IsBusy) return 0;
+
+        var affected = 0;
+        _isProgrammaticUpdate = true;
+        try
         {
-            _rules.Evaluate(record);
-            if (record.ManualOverride) _learning.Remember(record);
+            foreach (var record in records.Distinct())
+            {
+                var changed = false;
+                if (category is { } selectedCategory)
+                {
+                    record.Category = selectedCategory;
+                    if (selectedCategory != InvoiceCategory.Travel)
+                        record.SubCategory = TravelSubCategory.None;
+                    changed = true;
+                }
+
+                if (subCategory is { } selectedSubCategory)
+                {
+                    if (selectedSubCategory != TravelSubCategory.None && record.Category != InvoiceCategory.Travel)
+                        record.Category = InvoiceCategory.Travel;
+                    if (record.Category == InvoiceCategory.Travel)
+                    {
+                        record.SubCategory = selectedSubCategory;
+                        changed = true;
+                    }
+                }
+
+                if (!changed) continue;
+                record.ManualOverride = true;
+                record.ClassificationConfidence = 1.0;
+                _rules.Evaluate(record);
+                _learning.Remember(record);
+                affected++;
+            }
         }
+        finally
+        {
+            _isProgrammaticUpdate = false;
+        }
+
         _duplicateInvoices.Evaluate(Records.ToList());
         RecordsView.Refresh();
         RefreshStats();
         ScheduleAutosave();
-        ProgressMessage = $"已批量修改 {records.Count} 张发票的分类";
+        ProgressMessage = affected == 1
+            ? "已修改 1 张发票的分类"
+            : $"已批量修改 {affected} 张发票的分类";
+        return affected;
     }
 
     public void CompleteQuickReview(IEnumerable<InvoiceRecord> reviewedRecords, int reviewedCount, int totalCount)
@@ -984,9 +1042,10 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         if (sender is not InvoiceRecord record) return;
         if (e.PropertyName is not (nameof(InvoiceRecord.Category) or nameof(InvoiceRecord.SubCategory) or nameof(InvoiceRecord.TotalAmount))) return;
 
-        record.ManualOverride = true;
         if (e.PropertyName is nameof(InvoiceRecord.Category) or nameof(InvoiceRecord.SubCategory))
         {
+            record.ManualOverride = true;
+            record.ClassificationConfidence = 1.0;
             _learning.Remember(record);
         }
         _rules.Evaluate(record);

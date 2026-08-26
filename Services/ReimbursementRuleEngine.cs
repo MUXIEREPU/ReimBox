@@ -11,7 +11,7 @@ public sealed class ReimbursementRuleEngine(ReimbursementSettings settings)
         if (record.Category == InvoiceCategory.Travel && record.SubCategory == TravelSubCategory.Flight && settings.RequireFlightPaymentProof) record.RequiredDocuments.Add(AttachmentType.PaymentProof);
         if (record.Category == InvoiceCategory.Consumable && record.TotalAmount > settings.ConsumablePaymentThreshold) record.RequiredDocuments.Add(AttachmentType.PaymentProof);
         if (record.Category == InvoiceCategory.Consumable && record.IsThreeDPrinting && settings.RequireThreeDPrintDetails) record.RequiredDocuments.Add(AttachmentType.ThreeDPrintDetails);
-        record.Status = record.UserIgnored ? RecordStatus.Ignored : record.ValidationIssues.Any(x => x.Severity == ValidationSeverity.Error) ? RecordStatus.Error : record.Category == InvoiceCategory.Unknown ? RecordStatus.NeedConfirmation : record.MissingTypes().Any() ? RecordStatus.MissingDocuments : RecordStatus.Complete;
+        record.Status = record.UserIgnored ? RecordStatus.Ignored : record.ValidationIssues.Any(x => x.Severity == ValidationSeverity.Error) ? RecordStatus.Error : record.Category == InvoiceCategory.Unknown || (!record.ManualOverride && record.ClassificationConfidence is > 0 and < 0.70) ? RecordStatus.NeedConfirmation : record.MissingTypes().Any() ? RecordStatus.MissingDocuments : RecordStatus.Complete;
         record.OnChanged(nameof(record.StatusDisplay)); record.OnChanged(nameof(record.RequirementDisplays));
     }
 }

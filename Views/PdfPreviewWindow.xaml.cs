@@ -71,12 +71,11 @@ public partial class PdfPreviewWindow : Window
         e.Handled = true;
     }
 
-    private void PdfPreview_MouseLeave(object sender, MouseEventArgs e)
+    private void PdfPreview_LostMouseCapture(object sender, MouseEventArgs e)
     {
-        if (sender is ScrollViewer { IsMouseCaptured: true })
-        {
-            StopDrag(sender);
-        }
+        _dragStartPoint = null;
+        if (sender is ScrollViewer scrollViewer)
+            scrollViewer.Cursor = Cursors.Hand;
     }
 
     private void StopDrag(object sender)

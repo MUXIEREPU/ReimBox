@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using ReimbursementAssistant.Configuration;
 using ReimbursementAssistant.Models;
 using ReimbursementAssistant.Views;
+using ReimbursementAssistant.ViewModels;
 
 namespace UiVerifier;
 
@@ -13,6 +14,9 @@ internal static class Program
     [STAThread]
     private static int Main()
     {
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SystemDrive")))
+            Environment.SetEnvironmentVariable("SystemDrive", Path.GetPathRoot(Environment.SystemDirectory)?.TrimEnd(Path.DirectorySeparatorChar) ?? "C:");
+
         _ = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var temporaryFile = Path.Combine(Path.GetTempPath(), $"ReimBox-ui-{Guid.NewGuid():N}.txt");
         File.WriteAllText(temporaryFile, "preview");
@@ -27,6 +31,7 @@ internal static class Program
         try
         {
             var mainWindow = new MainWindow();
+            var viewModel = (MainViewModel)mainWindow.DataContext;
             var windows = new Window[]
             {
                 mainWindow,
@@ -34,12 +39,26 @@ internal static class Program
                 new QuickReviewWindow([record]),
                 new SettingsWindow(new ReimbursementSettings(), 0),
                 new AttachmentPreviewWindow(temporaryFile),
+                new PdfPreviewWindow(viewModel),
                 new ReimbursementInfoWindow("", "", ""),
                 new NamingRuleWindow([record], InvoiceNamingRule.Default()),
                 new ExportReviewWindow(1, 0, 1, 1m, ["测试提示"]),
                 new UpdateAvailableWindow(new ReimbursementAssistant.Services.UpdateCheckResult(true, new Version(0, 2, 0), new Version(0, 3, 0), "v0.3.0", "https://example.com", "测试更新说明"))
             };
             Console.WriteLine($"UI checks: {windows.Length}/{windows.Length} windows loaded");
+
+            var batchRecords = Enumerable.Range(1, 3).Select(index => new InvoiceRecord
+            {
+                OriginalFilePath = temporaryFile,
+                Category = InvoiceCategory.Consumable,
+                SubCategory = TravelSubCategory.None,
+                TotalAmount = index
+            }).ToList();
+            foreach (var batchRecord in batchRecords) viewModel.Records.Add(batchRecord);
+            var affected = viewModel.ApplyInlineCategoryEdit(batchRecords, InvoiceCategory.Travel, TravelSubCategory.Meal);
+            if (affected != batchRecords.Count || batchRecords.Any(item => item.Category != InvoiceCategory.Travel || item.SubCategory != TravelSubCategory.Meal || !item.ManualOverride))
+                throw new InvalidOperationException("多选分类没有应用到全部发票。");
+            Console.WriteLine("Bulk category check: all selected records updated atomically");
 
             var buildMenu = typeof(MainWindow).GetMethod("BuildProjectMenu", BindingFlags.Instance | BindingFlags.NonPublic)
                             ?? throw new MissingMethodException("未找到项目菜单构造方法。");

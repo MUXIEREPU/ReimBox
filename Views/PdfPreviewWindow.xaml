@@ -32,6 +32,10 @@
                            TextTrimming="CharacterEllipsis"
                            MaxWidth="500"
                            VerticalAlignment="Center" />
+                <TextBlock Text="跟随主窗口当前选中的发票"
+                            Foreground="#2563EB"
+                            Margin="14,0,0,0"
+                            VerticalAlignment="Center" />
                 <TextBlock Text="{Binding PdfPreviewPageDisplay}"
                            Foreground="#64748B"
                            Margin="14,0,0,0"
@@ -58,7 +62,7 @@
                               PreviewMouseLeftButtonDown="PdfPreview_MouseLeftButtonDown"
                               PreviewMouseLeftButtonUp="PdfPreview_MouseLeftButtonUp"
                               PreviewMouseMove="PdfPreview_MouseMove"
-                              MouseLeave="PdfPreview_MouseLeave"
+                              LostMouseCapture="PdfPreview_LostMouseCapture"
                               Cursor="Hand">
                     <Image Source="{Binding PdfPreviewImage}"
                            Stretch="Uniform"

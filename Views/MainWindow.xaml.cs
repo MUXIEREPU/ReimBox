@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private double _pdfPreviewDragStartVerticalOffset;
     private bool _isGridSelectionChanging;
     private bool _isBulkCategoryApplying;
+    private List<InvoiceRecord> _selectedInvoiceRecords = [];
     private PdfPreviewWindow? _pdfPreviewWindow;
 
     public MainWindow()
@@ -244,12 +245,11 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void PdfPreview_MouseLeave(object sender, MouseEventArgs e)
+    private void PdfPreview_LostMouseCapture(object sender, MouseEventArgs e)
     {
-        if (sender is ScrollViewer { IsMouseCaptured: true })
-        {
-            StopPdfPreviewDrag(sender);
-        }
+        _pdfPreviewDragStartPoint = null;
+        if (sender is ScrollViewer scrollViewer)
+            scrollViewer.Cursor = Cursors.Hand;
     }
 
     private void StopPdfPreviewDrag(object sender)
@@ -324,67 +324,65 @@ public partial class MainWindow : Window
 
     private void CategoryCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_isGridSelectionChanging || _isBulkCategoryApplying || DataContext is not MainViewModel viewModel)
+        if (_isGridSelectionChanging || _isBulkCategoryApplying || DataContext is not MainViewModel viewModel ||
+            CategoryCombo.SelectedValue is not InvoiceCategory category)
             return;
 
-        var selected = InvoiceGrid.SelectedItems.Cast<InvoiceRecord>().ToList();
-        if (selected.Count <= 1 || CategoryCombo.SelectedValue is not InvoiceCategory category)
-            return;
+        var selected = CurrentInvoiceSelection();
+        if (selected.Count == 0) return;
 
         _isBulkCategoryApplying = true;
         try
         {
-            foreach (var record in selected)
-            {
-                record.Category = category;
-                if (category != InvoiceCategory.Travel)
-                    record.SubCategory = TravelSubCategory.None;
-                record.ManualOverride = true;
-            }
+            viewModel.ApplyInlineCategoryEdit(selected, category, null);
+            RestoreGridSelection(selected);
         }
         finally
         {
             _isBulkCategoryApplying = false;
         }
-
-        viewModel.RefreshAfterBulkCategoryEdit(selected);
-        RestoreGridSelection(selected);
     }
 
     private void SubCategoryCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_isGridSelectionChanging || _isBulkCategoryApplying || DataContext is not MainViewModel viewModel)
+        if (_isGridSelectionChanging || _isBulkCategoryApplying || DataContext is not MainViewModel viewModel ||
+            SubCategoryCombo.SelectedValue is not TravelSubCategory subCategory)
             return;
 
-        var selected = InvoiceGrid.SelectedItems.Cast<InvoiceRecord>().ToList();
-        if (selected.Count <= 1 || SubCategoryCombo.SelectedValue is not TravelSubCategory subCategory)
-            return;
+        var selected = CurrentInvoiceSelection();
+        if (selected.Count == 0) return;
 
         _isBulkCategoryApplying = true;
         try
         {
-            foreach (var record in selected)
-            {
-                if (record.Category == InvoiceCategory.Travel)
-                {
-                    record.SubCategory = subCategory;
-                    record.ManualOverride = true;
-                }
-            }
+            viewModel.ApplyInlineCategoryEdit(selected, null, subCategory);
+            RestoreGridSelection(selected);
         }
         finally
         {
             _isBulkCategoryApplying = false;
         }
+    }
 
-        viewModel.RefreshAfterBulkCategoryEdit(selected);
-        RestoreGridSelection(selected);
+    private List<InvoiceRecord> CurrentInvoiceSelection()
+    {
+        var current = InvoiceGrid.SelectedItems.Cast<InvoiceRecord>().ToList();
+        if (current.Count > 0)
+        {
+            _selectedInvoiceRecords = current;
+        }
+        return _selectedInvoiceRecords.Where(record => InvoiceGrid.Items.Contains(record)).ToList();
     }
 
     private void RestoreGridSelection(List<InvoiceRecord> records)
     {
-        var valid = records.Where(r => InvoiceGrid.Items.Contains(r)).ToList();
-        if (valid.Count == 0) return;
+        var valid = records.Where(record => InvoiceGrid.Items.Contains(record)).ToList();
+        _selectedInvoiceRecords = valid;
+        if (valid.Count == 0)
+        {
+            UpdateBulkCategoryHint();
+            return;
+        }
 
         _isGridSelectionChanging = true;
         InvoiceGrid.SelectedItems.Clear();
@@ -461,7 +459,7 @@ public partial class MainWindow : Window
     private async void BulkEdit_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel viewModel) return;
-        var selected = InvoiceGrid.SelectedItems.Cast<InvoiceRecord>().ToList();
+        var selected = CurrentInvoiceSelection();
         if (selected.Count == 0 && viewModel.SelectedRecord is not null) selected.Add(viewModel.SelectedRecord);
         if (selected.Count == 0)
         {

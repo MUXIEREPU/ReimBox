@@ -914,7 +914,8 @@
                         <Border DockPanel.Dock="Right" Background="#F1F5F9" CornerRadius="11" Padding="4">
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="发票详情" Command="{Binding ShowDetailCommand}" Style="{StaticResource PanelTabButtonStyle}" Tag="{Binding IsDetailMode}" Margin="0,0,4,0" />
-                                <Button Content="PDF预览" Command="{Binding ShowPreviewCommand}" Style="{StaticResource PanelTabButtonStyle}" Tag="{Binding IsPreviewMode}" />
+                                <Button Content="PDF预览" Command="{Binding ShowPreviewCommand}" Style="{StaticResource PanelTabButtonStyle}" Tag="{Binding IsPreviewMode}" Margin="0,0,4,0" />
+                                <Button Content="弹出 ↗" Click="PdfPreviewDetach_Click" Padding="10,5" MinHeight="32" ToolTip="在可移动的独立窗口中预览当前 PDF" />
                             </StackPanel>
                         </Border>
                     </DockPanel>
@@ -978,14 +979,14 @@
                                     <TextBlock Text="一级分类" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,5" />
                                     <ComboBox x:Name="CategoryCombo"
                                               ItemsSource="{Binding CategoryOptions}"
-                                              SelectedValue="{Binding Category}"
+                                              SelectedValue="{Binding Category, Mode=OneWay}"
                                               SelectedValuePath="Value"
                                               DisplayMemberPath="Label"
                                               SelectionChanged="CategoryCombo_SelectionChanged" />
                                     <TextBlock Text="二级分类" Foreground="{StaticResource MutedTextBrush}" Margin="0,12,0,5" />
                                     <ComboBox x:Name="SubCategoryCombo"
                                               ItemsSource="{Binding SubCategoryOptions}"
-                                              SelectedValue="{Binding SubCategory}"
+                                              SelectedValue="{Binding SubCategory, Mode=OneWay}"
                                               SelectedValuePath="Value"
                                               DisplayMemberPath="Label"
                                               SelectionChanged="SubCategoryCombo_SelectionChanged" />
@@ -997,6 +998,7 @@
                                     <TextBlock Text="识别结果" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,10" />
                                     <TextBlock Text="{Binding RecognitionMethodDisplay, StringFormat=识别方式：{0}}" />
                                     <TextBlock Text="{Binding Confidence, StringFormat=字段完整度：{0:P0}}" />
+                                    <TextBlock Text="{Binding ClassificationConfidence, StringFormat=分类置信度：{0:P0}}" />
                                     <TextBlock Text="金额（可手动修正）" Foreground="{StaticResource MutedTextBrush}" Margin="0,14,0,5" />
                                     <TextBox Text="{Binding TotalAmount, UpdateSourceTrigger=PropertyChanged}" />
                                     <TextBlock Text="商品 / 说明" Foreground="{StaticResource MutedTextBrush}" Margin="0,12,0,5" />
@@ -1161,7 +1163,7 @@
                                               PreviewMouseLeftButtonDown="PdfPreview_MouseLeftButtonDown"
                                               PreviewMouseLeftButtonUp="PdfPreview_MouseLeftButtonUp"
                                               PreviewMouseMove="PdfPreview_MouseMove"
-                                              MouseLeave="PdfPreview_MouseLeave"
+                                               LostMouseCapture="PdfPreview_LostMouseCapture"
                                               Cursor="Hand">
                                     <Image Source="{Binding DataContext.PdfPreviewImage, RelativeSource={RelativeSource AncestorType=Window}}"
                                            Stretch="Uniform"
